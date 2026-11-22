@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Shield, Swords, Sparkles, Users, Plus, Trash2, Upload, Download,
-  Play, RotateCcw, Lock, Unlock, Layers, AlertTriangle, CheckCircle2,
-  Eye, RefreshCw, ChevronRight, Settings, FolderOpen, Copy, X,
-  Zap, Heart, Flame, Award, Search, Filter, Shuffle, Undo2, HelpCircle
+  Swords, Sparkles, Users, Plus, Trash2, Upload, Download,
+  Play, Lock, Layers, AlertTriangle, CheckCircle2,
+  Settings, FolderOpen, Copy, X, Zap, Flame, Award, Undo2
 } from 'lucide-react';
-import { db, isFirebaseConfigured, doc, setDoc, getDoc, onSnapshot, updateDoc } from './firebase';
+import { db, isFirebaseConfigured, doc, setDoc, getDoc, onSnapshot } from './firebase';
 
 // ============================================================================
 // CONSTANTS & DEFINITIONS (GATE OF KRONOS THEME - THAI)
@@ -27,22 +26,22 @@ const CARD_CATEGORIES = [
 ];
 
 const ASPECTS = [
-  { id: 'HeroKit', label: 'ชุดประจำตัวฮีโร่', color: 'bg-amber-500/20 text-amber-300 border-amber-500/40' },
-  { id: 'Aggression', label: 'Aggression (ดุดัน)', color: 'bg-red-500/20 text-red-300 border-red-500/40' },
-  { id: 'Justice', label: 'Justice (ยุติธรรม)', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' },
-  { id: 'Leadership', label: 'Leadership (ผู้นำ)', color: 'bg-sky-500/20 text-sky-300 border-sky-500/40' },
-  { id: 'Protection', label: 'Protection (ป้องกัน)', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
-  { id: 'Basics', label: 'Basics (พื้นฐาน)', color: 'bg-slate-500/20 text-slate-300 border-slate-500/40' },
-  { id: 'Encounter', label: 'Encounter (เผชิญภัย)', color: 'bg-purple-500/20 text-purple-300 border-purple-500/40' }
+  { id: 'HeroKit', label: 'ชุดประจำตัวฮีโร่' },
+  { id: 'Aggression', label: 'Aggression (ดุดัน)' },
+  { id: 'Justice', label: 'Justice (ยุติธรรม)' },
+  { id: 'Leadership', label: 'Leadership (ผู้นำ)' },
+  { id: 'Protection', label: 'Protection (ป้องกัน)' },
+  { id: 'Basics', label: 'Basics (พื้นฐาน)' },
+  { id: 'Encounter', label: 'Encounter (เผชิญภัย)' }
 ];
 
 const CARD_TYPES = [
   'ร่างฮีโร่ (Hero)',
   'ร่างพลเรือน (Alter-Ego)',
+  'พันธมิตร (Ally)',
   'เหตุการณ์ (Event)',
   'อัปเกรด (Upgrade)',
   'สนับสนุน (Support)',
-  'พันธมิตร (Ally)',
   'ทรัพยากร (Resource)',
   'ภาระผูกพัน (Obligation)',
   'วายร้าย (Villain)',
@@ -52,6 +51,220 @@ const CARD_TYPES = [
   'การทรยศ (Treachery)',
   'อุปกรณ์เสริม (Attachment)'
 ];
+
+// Dynamic field schema per Card Type so only relevant fields show up
+const TYPE_FIELD_CONFIG = {
+  'ร่างฮีโร่ (Hero)': {
+    showCost: false,
+    showThw: true,
+    showAtk: true,
+    showDef: true,
+    showRec: false,
+    showSch: false,
+    showHp: true,
+    showHandSize: true,
+    showConsequentialDamage: false,
+    showResources: false,
+    showBoost: false,
+    showSchemeFields: false,
+    showMaxCopies: false
+  },
+  'ร่างพลเรือน (Alter-Ego)': {
+    showCost: false,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: true,
+    showSch: false,
+    showHp: true,
+    showHandSize: true,
+    showConsequentialDamage: false,
+    showResources: false,
+    showBoost: false,
+    showSchemeFields: false,
+    showMaxCopies: false
+  },
+  'พันธมิตร (Ally)': {
+    showCost: true,
+    showThw: true,
+    showAtk: true,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: true,
+    showHandSize: false,
+    showConsequentialDamage: true,
+    showResources: true,
+    showBoost: false,
+    showSchemeFields: false,
+    showMaxCopies: true
+  },
+  'เหตุการณ์ (Event)': {
+    showCost: true,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: false,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: true,
+    showBoost: false,
+    showSchemeFields: false,
+    showMaxCopies: true
+  },
+  'อัปเกรด (Upgrade)': {
+    showCost: true,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: false,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: true,
+    showBoost: false,
+    showSchemeFields: false,
+    showMaxCopies: true
+  },
+  'สนับสนุน (Support)': {
+    showCost: true,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: false,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: true,
+    showBoost: false,
+    showSchemeFields: false,
+    showMaxCopies: true
+  },
+  'ทรัพยากร (Resource)': {
+    showCost: false,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: false,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: true,
+    showBoost: false,
+    showSchemeFields: false,
+    showMaxCopies: true
+  },
+  'ภาระผูกพัน (Obligation)': {
+    showCost: false,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: false,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: false,
+    showBoost: false,
+    showSchemeFields: false,
+    showMaxCopies: true
+  },
+  'วายร้าย (Villain)': {
+    showCost: false,
+    showThw: false,
+    showAtk: true,
+    showDef: false,
+    showRec: false,
+    showSch: true,
+    showHp: true,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: false,
+    showBoost: false,
+    showSchemeFields: true,
+    showMaxCopies: false
+  },
+  'แผนการหลัก (Main Scheme)': {
+    showCost: false,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: false,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: false,
+    showBoost: false,
+    showSchemeFields: true,
+    showMaxCopies: false
+  },
+  'แผนการรอง (Side Scheme)': {
+    showCost: false,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: false,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: false,
+    showBoost: false,
+    showSchemeFields: true,
+    showMaxCopies: true
+  },
+  'ลูกสมุน (Minion)': {
+    showCost: false,
+    showThw: false,
+    showAtk: true,
+    showDef: false,
+    showRec: false,
+    showSch: true,
+    showHp: true,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: false,
+    showBoost: true,
+    showSchemeFields: false,
+    showMaxCopies: true
+  },
+  'การทรยศ (Treachery)': {
+    showCost: false,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: false,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: false,
+    showBoost: true,
+    showSchemeFields: false,
+    showMaxCopies: true
+  },
+  'อุปกรณ์เสริม (Attachment)': {
+    showCost: false,
+    showThw: false,
+    showAtk: false,
+    showDef: false,
+    showRec: false,
+    showSch: false,
+    showHp: false,
+    showHandSize: false,
+    showConsequentialDamage: false,
+    showResources: false,
+    showBoost: true,
+    showSchemeFields: false,
+    showMaxCopies: true
+  }
+};
 
 const TRIGGER_TIMINGS = [
   { id: 'None', label: 'ไม่มี / ใช้งานทั่วไป (Passive / Manual)' },
@@ -109,7 +322,7 @@ const emptyCardForm = {
   aspect: 'HeroKit',
   heroOwner: '',
   setGroup: '',
-  type: 'ร่างฮีโร่ (Hero)',
+  type: 'พันธมิตร (Ally)',
   stage: '1',
   cost: 0,
   thw: 0,
@@ -117,9 +330,10 @@ const emptyCardForm = {
   def: 0,
   rec: 0,
   sch: 0,
-  hp: 10,
+  hp: 3,
   hpPerPlayer: false,
   handSize: 5,
+  consequentialDamage: 1,
   threatBase: 0,
   threatThreshold: 10,
   threatPerPlayer: true,
@@ -129,18 +343,14 @@ const emptyCardForm = {
   text: '',
   maxCopies: 1,
   imageUrl: '',
-  // 4-Step Rule Builder
   triggerTiming: 'None',
   triggerEvent: 'manual',
   triggerCondition: '',
-  triggerCostType: 'none', // none | exhaust | discard_self | pay_resource
+  triggerCostType: 'none',
   effectAction: 'custom',
   effectValue: 1
 };
 
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
 const uid = () => Math.random().toString(36).substring(2, 10);
 const shuffleArray = (arr) => {
   const copy = [...arr];
@@ -151,16 +361,12 @@ const shuffleArray = (arr) => {
   return copy;
 };
 
-// ============================================================================
-// MAIN APPLICATION
-// ============================================================================
 export default function GateOfKronos() {
-  const [activeTab, setActiveTab] = useState('lobby'); // lobby | tabletop | deckbuilder | admin
+  const [activeTab, setActiveTab] = useState('lobby');
   const [cards, setCards] = useState([]);
   const [starterDecks, setStarterDecks] = useState([]);
   const [customDecks, setCustomDecks] = useState([]);
 
-  // Player Profile
   const [playerName, setPlayerName] = useState(() => localStorage.getItem('gok_player_name') || 'ผู้เล่น 1');
   const [playerId] = useState(() => {
     const saved = sessionStorage.getItem('gok_pid');
@@ -170,38 +376,27 @@ export default function GateOfKronos() {
     return id;
   });
 
-  // Multiplayer Room State
   const [roomCode, setRoomCode] = useState('');
   const [joinInput, setJoinInput] = useState('');
   const [roomData, setRoomData] = useState(null);
-  const [selectedDeckSource, setSelectedDeckSource] = useState('starter'); // starter | custom
+  const [selectedDeckSource, setSelectedDeckSource] = useState('starter');
   const [selectedDeckId, setSelectedDeckId] = useState('');
 
-  // Scenario Setup State
   const [selectedVillainGroup, setSelectedVillainGroup] = useState('');
-  const [difficulty, setDifficulty] = useState('normal'); // normal (I-II) | expert (II-III)
+  const [difficulty, setDifficulty] = useState('normal');
   const [selectedSides, setSelectedSides] = useState([]);
 
-  // Fair Undo History Stack (Cleared whenever secret info is revealed/drawn)
   const [undoStack, setUndoStack] = useState([]);
   const [undoLockedReason, setUndoLockedReason] = useState('');
-
-  // Semi-Automated Trigger Alerts
   const [activeTriggers, setActiveTriggers] = useState([]);
-
-  // Inspect Modal
   const [inspectedCard, setInspectedCard] = useState(null);
   const [viewingPlayerId, setViewingPlayerId] = useState(null);
 
-  // Load initial database from localStorage (Clean database by default)
   useEffect(() => {
     try {
-      const savedCards = JSON.parse(localStorage.getItem(STORAGE_KEYS.CARDS) || '[]');
-      const savedStarters = JSON.parse(localStorage.getItem(STORAGE_KEYS.STARTERS) || '[]');
-      const savedCustoms = JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOM_DECKS) || '[]');
-      setCards(savedCards);
-      setStarterDecks(savedStarters);
-      setCustomDecks(savedCustoms);
+      setCards(JSON.parse(localStorage.getItem(STORAGE_KEYS.CARDS) || '[]'));
+      setStarterDecks(JSON.parse(localStorage.getItem(STORAGE_KEYS.STARTERS) || '[]'));
+      setCustomDecks(JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOM_DECKS) || '[]'));
     } catch (e) {
       console.error('Failed to load local database:', e);
     }
@@ -230,26 +425,18 @@ export default function GateOfKronos() {
     localStorage.setItem(STORAGE_KEYS.CUSTOM_DECKS, JSON.stringify(updated));
   };
 
-  // ==========================================================================
-  // MULTIPLAYER ROOM SYNC (Firebase if configured, otherwise LocalStorage Sync)
-  // ==========================================================================
   useEffect(() => {
     if (!roomCode) return;
 
     if (isFirebaseConfigured && db) {
       const unsub = onSnapshot(doc(db, 'gok_rooms', roomCode), (snap) => {
-        if (snap.exists()) {
-          setRoomData(snap.data());
-        }
+        if (snap.exists()) setRoomData(snap.data());
       });
       return () => unsub();
     } else {
-      // Cross-tab Real-time Sync via localStorage + storage event
       const loadLocalRoom = () => {
         const rooms = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROOMS) || '{}');
-        if (rooms[roomCode]) {
-          setRoomData(rooms[roomCode]);
-        }
+        if (rooms[roomCode]) setRoomData(rooms[roomCode]);
       };
       loadLocalRoom();
       const onStorage = (e) => {
@@ -265,7 +452,6 @@ export default function GateOfKronos() {
   }, [roomCode]);
 
   const persistRoomState = async (newState, undoMeta = { type: 'reversible' }) => {
-    // Handle Fair Undo Logic
     if (roomData) {
       if (undoMeta.type === 'reversible') {
         setUndoStack((prev) => [...prev.slice(-14), JSON.parse(JSON.stringify(roomData))]);
@@ -289,8 +475,7 @@ export default function GateOfKronos() {
   const handleUndo = async () => {
     if (undoStack.length === 0) return;
     const previousState = undoStack[undoStack.length - 1];
-    const nextStack = undoStack.slice(0, -1);
-    setUndoStack(nextStack);
+    setUndoStack(undoStack.slice(0, -1));
 
     const restoredState = {
       ...previousState,
@@ -309,9 +494,6 @@ export default function GateOfKronos() {
     }
   };
 
-  // ==========================================================================
-  // TRIGGER ENGINE (SEMI-AUTOMATED INTERRUPT / RESPONSE DETECTOR)
-  // ==========================================================================
   const fireGameEvent = (eventId, contextLabel) => {
     if (!roomData || !roomData.players) return;
     const me = roomData.players[playerId];
@@ -329,38 +511,22 @@ export default function GateOfKronos() {
     });
 
     if (matched.length > 0) {
-      const alerts = matched.map((card) => ({
-        alertId: uid(),
-        eventId,
-        contextLabel,
-        card
-      }));
-      setActiveTriggers((prev) => [...prev, ...alerts]);
+      setActiveTriggers((prev) => [
+        ...prev,
+        ...matched.map((card) => ({ alertId: uid(), eventId, contextLabel, card }))
+      ]);
     }
   };
 
-  // ==========================================================================
-  // LOBBY ACTIONS
-  // ==========================================================================
   const createRoom = async () => {
     const code = Math.random().toString(36).substring(2, 7).toUpperCase();
     const initialRoom = {
       code,
       hostId: playerId,
-      status: 'waiting', // waiting | playing
-      scenario: {
-        villainGroup: selectedVillainGroup,
-        difficulty,
-        sides: selectedSides
-      },
+      status: 'waiting',
+      scenario: { villainGroup: selectedVillainGroup, difficulty, sides: selectedSides },
       players: {
-        [playerId]: {
-          id: playerId,
-          name: playerName,
-          ready: false,
-          deckId: '',
-          deckSource: 'starter'
-        }
+        [playerId]: { id: playerId, name: playerName, ready: false, deckId: '', deckSource: 'starter' }
       },
       table: null,
       logs: [{ id: uid(), time: new Date().toLocaleTimeString('th-TH'), text: `สร้างห้อง ${code} โดย ${playerName}` }]
@@ -426,12 +592,7 @@ export default function GateOfKronos() {
       ...roomData,
       players: {
         ...roomData.players,
-        [playerId]: {
-          ...roomData.players[playerId],
-          deckSource: source,
-          deckId,
-          ready: Boolean(deckId)
-        }
+        [playerId]: { ...roomData.players[playerId], deckSource: source, deckId, ready: Boolean(deckId) }
       }
     };
     await persistRoomState(updated, { type: 'none' });
@@ -457,7 +618,6 @@ export default function GateOfKronos() {
     const activeVillainCard = villains[difficulty === 'expert' && villains.length > 1 ? 1 : 0] || villains[0];
     const activeSchemeCard = mainSchemes[0];
 
-    // Build Encounter Deck (Villain encounter cards + Selected Sides)
     const villainEncounter = villainCards.filter(
       (c) => !c.type.includes('วายร้าย') && !c.type.includes('แผนการหลัก')
     );
@@ -466,13 +626,10 @@ export default function GateOfKronos() {
     let encounterDeck = [];
     [...villainEncounter, ...sideEncounter].forEach((c) => {
       const copies = Number(c.maxCopies || 1);
-      for (let i = 0; i < copies; i++) {
-        encounterDeck.push({ ...c, instanceId: uid() });
-      }
+      for (let i = 0; i < copies; i++) encounterDeck.push({ ...c, instanceId: uid() });
     });
     encounterDeck = shuffleArray(encounterDeck);
 
-    // Build Player States
     const initializedPlayers = {};
     playerList.forEach((p) => {
       const deckPool = p.deckSource === 'starter' ? starterDecks : customDecks;
@@ -483,9 +640,7 @@ export default function GateOfKronos() {
       let fullDeck = [];
       (deckObj?.cardIds || []).forEach((cid) => {
         const cardData = cards.find((c) => c.id === cid);
-        if (cardData) {
-          fullDeck.push({ ...cardData, instanceId: uid() });
-        }
+        if (cardData) fullDeck.push({ ...cardData, instanceId: uid() });
       });
       fullDeck = shuffleArray(fullDeck);
 
@@ -495,7 +650,7 @@ export default function GateOfKronos() {
 
       initializedPlayers[p.id] = {
         ...p,
-        form: 'alter-ego', // alter-ego | hero
+        form: 'alter-ego',
         exhausted: false,
         hp: Number(alterCard?.hp || 12),
         maxHp: Number(alterCard?.hp || 12),
@@ -522,15 +677,11 @@ export default function GateOfKronos() {
     const startedRoom = {
       ...roomData,
       status: 'playing',
-      scenario: {
-        villainGroup: selectedVillainGroup,
-        difficulty,
-        sides: selectedSides
-      },
+      scenario: { villainGroup: selectedVillainGroup, difficulty, sides: selectedSides },
       players: initializedPlayers,
       table: {
         round: 1,
-        phase: 'player', // player | villain
+        phase: 'player',
         firstPlayerId: playerList[0].id,
         villain: activeVillainCard
           ? {
@@ -580,15 +731,11 @@ export default function GateOfKronos() {
     await persistRoomState(startedRoom, { type: 'irreversible', reason: 'เริ่มเกมและแจกไพ่เริ่มต้นแล้ว' });
   };
 
-  // ==========================================================================
-  // RENDER NAVIGATION BAR
-  // ==========================================================================
   const uniqueVillainGroups = [...new Set(cards.filter((c) => c.category === 'Scenario' && c.setGroup).map((c) => c.setGroup))];
   const uniqueSideGroups = [...new Set(cards.filter((c) => c.category === 'Side' && c.setGroup).map((c) => c.setGroup))];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Top Header */}
       <header className="bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 sticky top-0 z-40 backdrop-blur">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
@@ -602,7 +749,6 @@ export default function GateOfKronos() {
           </div>
         </div>
 
-        {/* Navigation Tabs */}
         <nav className="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => setActiveTab('lobby')}
@@ -643,7 +789,6 @@ export default function GateOfKronos() {
           </button>
         </nav>
 
-        {/* Player Badge */}
         <div className="flex items-center gap-2">
           <span className={`text-xs px-2 py-1 rounded-full border ${isFirebaseConfigured ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/10 text-amber-300 border-amber-500/30'}`}>
             {isFirebaseConfigured ? 'Online Sync (Firebase)' : 'Local / Multi-Tab Sync'}
@@ -658,14 +803,12 @@ export default function GateOfKronos() {
         </div>
       </header>
 
-      {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4">
         {activeTab === 'lobby' && (
           <LobbyView
             cards={cards}
             starterDecks={starterDecks}
             customDecks={customDecks}
-            roomCode={roomCode}
             roomData={roomData}
             joinInput={joinInput}
             setJoinInput={setJoinInput}
@@ -708,7 +851,6 @@ export default function GateOfKronos() {
         {activeTab === 'deckbuilder' && (
           <DeckBuilderView
             cards={cards}
-            starterDecks={starterDecks}
             customDecks={customDecks}
             saveCustomDecks={saveCustomDecks}
             setInspectedCard={setInspectedCard}
@@ -726,7 +868,6 @@ export default function GateOfKronos() {
         )}
       </main>
 
-      {/* Card Zoom / Inspect Modal */}
       {inspectedCard && (
         <div
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -751,7 +892,6 @@ export default function GateOfKronos() {
                       {inspectedCard.series} • {inspectedCard.type}
                     </span>
                     <h3 className="text-xl font-bold mt-1 text-white">{inspectedCard.name}</h3>
-                    {inspectedCard.subTitle && <p className="text-xs text-slate-400">{inspectedCard.subTitle}</p>}
                   </div>
                   <button onClick={() => setInspectedCard(null)} className="p-1 text-slate-400 hover:text-white">
                     <X className="w-5 h-5" />
@@ -762,23 +902,25 @@ export default function GateOfKronos() {
                   <p className="text-xs font-semibold text-amber-400 mt-2">แท็ก: {inspectedCard.traits}</p>
                 )}
 
-                <div className="grid grid-cols-4 gap-1.5 mt-3 text-center text-xs">
-                  <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
-                    <div className="text-slate-400">Cost</div>
-                    <div className="font-bold text-amber-300">{inspectedCard.cost}</div>
-                  </div>
-                  <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
-                    <div className="text-slate-400">THW/SCH</div>
-                    <div className="font-bold text-sky-300">{inspectedCard.thw || inspectedCard.sch || 0}</div>
-                  </div>
-                  <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
-                    <div className="text-slate-400">ATK</div>
-                    <div className="font-bold text-rose-300">{inspectedCard.atk || 0}</div>
-                  </div>
-                  <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
-                    <div className="text-slate-400">DEF/HP</div>
-                    <div className="font-bold text-emerald-300">{inspectedCard.def || inspectedCard.hp || 0}</div>
-                  </div>
+                <div className="grid grid-cols-3 gap-1.5 mt-3 text-center text-xs">
+                  {inspectedCard.type === 'พันธมิตร (Ally)' && (
+                    <>
+                      <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
+                        <div className="text-slate-400">Cost / THW / ATK</div>
+                        <div className="font-bold text-amber-300">
+                          {inspectedCard.cost} / {inspectedCard.thw || 0} / {inspectedCard.atk || 0}
+                        </div>
+                      </div>
+                      <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
+                        <div className="text-slate-400">HP</div>
+                        <div className="font-bold text-emerald-300">{inspectedCard.hp || 0}</div>
+                      </div>
+                      <div className="bg-slate-950 p-1.5 rounded border border-slate-800">
+                        <div className="text-slate-400">Consequential DMG</div>
+                        <div className="font-bold text-rose-300">{inspectedCard.consequentialDamage ?? 1}</div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="mt-3 bg-slate-950/90 p-3 rounded-xl border border-slate-800 text-sm text-slate-200 whitespace-pre-line leading-relaxed">
@@ -800,10 +942,10 @@ export default function GateOfKronos() {
 }
 
 // ============================================================================
-// 1. LOBBY & SCENARIO SETUP VIEW
+// 1. LOBBY VIEW
 // ============================================================================
 function LobbyView({
-  cards, starterDecks, customDecks, roomCode, roomData, joinInput, setJoinInput,
+  cards, starterDecks, customDecks, roomData, joinInput, setJoinInput,
   createRoom, joinRoom, playerId, selectedDeckSource, selectedDeckId, selectDeckForRoom,
   uniqueVillainGroups, uniqueSideGroups, selectedVillainGroup, setSelectedVillainGroup,
   difficulty, setDifficulty, selectedSides, setSelectedSides, startGame, setActiveTab
@@ -816,7 +958,6 @@ function LobbyView({
 
   return (
     <div className="space-y-6">
-      {/* Database Status Banner */}
       {cards.length === 0 && (
         <div className="bg-amber-500/10 border border-amber-500/40 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -824,7 +965,7 @@ function LobbyView({
             <div>
               <h3 className="font-bold text-amber-300">ฐานข้อมูลการ์ดยังว่างอยู่ (Clean Database)</h3>
               <p className="text-sm text-slate-300 mt-0.5">
-                กรุณาเข้าไปที่หน้า <strong>Admin Studio</strong> เพื่อนำเข้ารูปภาพและกรอกข้อมูลการ์ด Core Set ของคุณ หรือ Import ไฟล์ JSON ที่บันทึกไว้ก่อนเริ่มจัดเด็คและตั้งห้องเล่นครับ
+                กรุณาเข้าไปที่หน้า <strong>Admin Studio</strong> เพื่อนำเข้ารูปภาพและกรอกข้อมูลการ์ด Core Set ของคุณ หรือ Import ไฟล์ JSON ที่บันทึกไว้
               </p>
             </div>
           </div>
@@ -837,7 +978,6 @@ function LobbyView({
         </div>
       )}
 
-      {/* Create or Join Room */}
       {!roomData ? (
         <div className="grid md:grid-cols-2 gap-6">
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -883,9 +1023,7 @@ function LobbyView({
           </div>
         </div>
       ) : (
-        /* Active Room Setup */
         <div className="space-y-6">
-          {/* Room Header */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
             <div>
               <span className="text-xs text-slate-400">รหัสห้อง (Room Code)</span>
@@ -917,7 +1055,6 @@ function LobbyView({
           </div>
 
           <div className="grid lg:grid-cols-3 gap-6">
-            {/* Column 1: Player Deck Selection */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
               <h3 className="font-bold text-lg flex items-center gap-2 text-sky-300">
                 <Layers className="w-5 h-5" /> 1. เลือกเด็คของคุณ (40 ใบ)
@@ -962,19 +1099,9 @@ function LobbyView({
                     {selectedDeckId === deck.id && <CheckCircle2 className="w-5 h-5 text-amber-400" />}
                   </button>
                 ))}
-
-                {(selectedDeckSource === 'starter' ? starterDecks : customDecks).length === 0 && (
-                  <div className="text-center py-6 text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
-                    ยังไม่มีเด็คในหมวดนี้ สามารถสร้างได้ที่หน้า{' '}
-                    <button onClick={() => setActiveTab(selectedDeckSource === 'starter' ? 'admin' : 'deckbuilder')} className="text-amber-400 underline">
-                      {selectedDeckSource === 'starter' ? 'Admin Studio' : 'จัดเด็ค'}
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Column 2: Scenario & Modular Side Setup */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
               <h3 className="font-bold text-lg flex items-center gap-2 text-rose-300">
                 <Flame className="w-5 h-5" /> 2. เลือกวายร้าย & ชุดเสริม (Side)
@@ -985,7 +1112,7 @@ function LobbyView({
                 <select
                   value={selectedVillainGroup}
                   onChange={(e) => setSelectedVillainGroup(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-rose-500"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm"
                 >
                   <option value="">-- เลือกวายร้าย --</option>
                   {uniqueVillainGroups.map((vg) => (
@@ -1028,19 +1155,15 @@ function LobbyView({
                         type="checkbox"
                         checked={selectedSides.includes(side)}
                         onChange={() => toggleSide(side)}
-                        className="rounded text-rose-500 focus:ring-0"
+                        className="rounded text-rose-500"
                       />
                       <span>{side}</span>
                     </label>
                   ))}
-                  {uniqueSideGroups.length === 0 && (
-                    <p className="text-xs text-slate-500">ยังไม่มีชุดเสริมในฐานข้อมูล (เพิ่มได้ที่ Admin Studio หมวด Side)</p>
-                  )}
                 </div>
               </div>
             </div>
 
-            {/* Column 3: Party Members */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
               <h3 className="font-bold text-lg flex items-center gap-2 text-emerald-300">
                 <Users className="w-5 h-5" /> 3. สมาชิกในปาร์ตี้ (1–4 คน)
@@ -1057,12 +1180,9 @@ function LobbyView({
                             {idx + 1}
                           </span>
                           {p.name}
-                          {p.id === roomData.hostId && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded">หัวหน้าห้อง</span>
-                          )}
                         </div>
                         <div className="text-xs text-slate-400 mt-1">
-                          เด็ค: {chosenDeck ? `${chosenDeck.name} (${chosenDeck.aspect})` : 'ยังไม่เลือกเด็ค'}
+                          เด็ค: {chosenDeck ? `${chosenDeck.name}` : 'ยังไม่เลือกเด็ค'}
                         </div>
                       </div>
                       {p.ready ? (
@@ -1083,7 +1203,7 @@ function LobbyView({
 }
 
 // ============================================================================
-// 2. GATE OF KRONOS TABLETOP VIEW (SEMI-AUTOMATED + FAIR UNDO)
+// 2. TABLETOP VIEW
 // ============================================================================
 function TabletopView({
   roomData, playerId, viewingPlayerId, setViewingPlayerId, persistRoomState,
@@ -1096,82 +1216,29 @@ function TabletopView({
   const isMe = activePlayer?.id === playerId;
   const numPlayers = Object.keys(players).length;
 
-  const [newSideSchemeName, setNewSideSchemeName] = useState('');
-  const [newSideSchemeThreat, setNewSideSchemeThreat] = useState(3);
-
   const addLog = (logs, text) => [
     ...(logs || []).slice(-39),
     { id: uid(), time: new Date().toLocaleTimeString('th-TH'), text }
   ];
 
-  // --- Reversible Actions (Can be Undone) ---
   const adjustVillainHp = async (delta) => {
     const nextHp = Math.max(0, table.villain.currentHp + delta);
     const updated = {
       ...roomData,
-      table: {
-        ...table,
-        villain: { ...table.villain, currentHp: nextHp }
-      },
+      table: { ...table, villain: { ...table.villain, currentHp: nextHp } },
       logs: addLog(roomData.logs, `${activePlayer.name} ปรับ HP วายร้าย (${delta > 0 ? '+' + delta : delta}) → เหลือ ${nextHp}`)
     };
     await persistRoomState(updated, { type: 'reversible' });
     if (delta < 0) fireGameEvent('damage_taken', `วายร้ายได้รับความเสียหาย ${Math.abs(delta)} หน่วย`);
   };
 
-  const advanceVillainStage = async () => {
-    const nextIdx = table.currentVillainStageIdx + 1;
-    if (nextIdx >= (table.villainStages || []).length) {
-      alert('🎉 ยินดีด้วย! คุณกำจัดวายร้ายสเตจสุดท้ายสำเร็จแล้ว!');
-      return;
-    }
-    const nextStageCard = table.villainStages[nextIdx];
-    const maxHp = Number(nextStageCard.hp || 18) * (nextStageCard.hpPerPlayer ? numPlayers : 1);
-    const updated = {
-      ...roomData,
-      table: {
-        ...table,
-        currentVillainStageIdx: nextIdx,
-        villain: {
-          ...nextStageCard,
-          currentHp: maxHp,
-          maxHp,
-          statuses: { stunned: false, confused: false, tough: nextStageCard.text?.includes('คงกระพัน') || false }
-        }
-      },
-      logs: addLog(roomData.logs, `🔥 วายร้ายเข้าสู่สเตจถัดไป: ${nextStageCard.name} (HP ${maxHp})`)
-    };
-    await persistRoomState(updated, { type: 'reversible' });
-  };
-
   const adjustMainThreat = async (delta) => {
     const nextThreat = Math.max(0, table.mainScheme.threat + delta);
-    if (delta > 0) {
-      fireGameEvent('threat_added', `กำลังจะเพิ่มแต้มภัยคุกคาม +${delta} แต้มลงบนแผนการหลัก`);
-    }
+    if (delta > 0) fireGameEvent('threat_added', `กำลังจะเพิ่มแต้มภัยคุกคาม +${delta} แต้มลงบนแผนการหลัก`);
     const updated = {
       ...roomData,
-      table: {
-        ...table,
-        mainScheme: { ...table.mainScheme, threat: nextThreat }
-      },
+      table: { ...table, mainScheme: { ...table.mainScheme, threat: nextThreat } },
       logs: addLog(roomData.logs, `${activePlayer.name} ปรับภัยคุกคามแผนการหลัก (${delta > 0 ? '+' + delta : delta}) → ${nextThreat}/${table.mainScheme.threshold}`)
-    };
-    await persistRoomState(updated, { type: 'reversible' });
-  };
-
-  const toggleVillainStatus = async (statusKey) => {
-    const current = table.villain.statuses?.[statusKey] || false;
-    const updated = {
-      ...roomData,
-      table: {
-        ...table,
-        villain: {
-          ...table.villain,
-          statuses: { ...table.villain.statuses, [statusKey]: !current }
-        }
-      },
-      logs: addLog(roomData.logs, `${activePlayer.name} ${!current ? 'ใส่' : 'ถอด'}สถานะ [${statusKey}] บนตัววายร้าย`)
     };
     await persistRoomState(updated, { type: 'reversible' });
   };
@@ -1181,14 +1248,10 @@ function TabletopView({
     const nextHp = Math.max(0, Math.min(activePlayer.maxHp + 10, activePlayer.hp + delta));
     const updated = {
       ...roomData,
-      players: {
-        ...players,
-        [playerId]: { ...activePlayer, hp: nextHp }
-      },
+      players: { ...players, [playerId]: { ...activePlayer, hp: nextHp } },
       logs: addLog(roomData.logs, `${activePlayer.name} ปรับ HP ตัวเอง (${delta > 0 ? '+' + delta : delta}) → ${nextHp}/${activePlayer.maxHp}`)
     };
     await persistRoomState(updated, { type: 'reversible' });
-    if (delta < 0) fireGameEvent('damage_taken', `${activePlayer.name} ได้รับความเสียหาย ${Math.abs(delta)} หน่วย`);
   };
 
   const flipIdentityForm = async () => {
@@ -1197,54 +1260,11 @@ function TabletopView({
     const nextIdentity = nextForm === 'hero' ? activePlayer.heroCard : activePlayer.alterCard;
     const updated = {
       ...roomData,
-      players: {
-        ...players,
-        [playerId]: {
-          ...activePlayer,
-          form: nextForm,
-          identity: nextIdentity
-        }
-      },
-      logs: addLog(
-        roomData.logs,
-        `🔄 ${activePlayer.name} เปลี่ยนเป็น${nextForm === 'hero' ? 'ร่างฮีโร่ (Hero)' : 'ร่างพลเรือน (Alter-Ego)'}`
-      )
+      players: { ...players, [playerId]: { ...activePlayer, form: nextForm, identity: nextIdentity } },
+      logs: addLog(roomData.logs, `🔄 ${activePlayer.name} เปลี่ยนเป็น${nextForm === 'hero' ? 'ร่างฮีโร่' : 'ร่างพลเรือน'}`)
     };
     await persistRoomState(updated, { type: 'reversible' });
-    fireGameEvent(
-      nextForm === 'hero' ? 'change_form_hero' : 'change_form_alter',
-      `${activePlayer.name} เปลี่ยนเป็น${nextForm === 'hero' ? 'ร่างฮีโร่' : 'ร่างพลเรือน'}`
-    );
-  };
-
-  const toggleIdentityExhaust = async () => {
-    if (!isMe) return;
-    const updated = {
-      ...roomData,
-      players: {
-        ...players,
-        [playerId]: { ...activePlayer, exhausted: !activePlayer.exhausted }
-      },
-      logs: addLog(roomData.logs, `${activePlayer.name} ${!activePlayer.exhausted ? 'ตะแคง' : 'ตั้งตรง'}การ์ดตัวละครหลัก`)
-    };
-    await persistRoomState(updated, { type: 'reversible' });
-  };
-
-  const togglePlayerStatus = async (statusKey) => {
-    if (!isMe) return;
-    const current = activePlayer.statuses?.[statusKey] || false;
-    const updated = {
-      ...roomData,
-      players: {
-        ...players,
-        [playerId]: {
-          ...activePlayer,
-          statuses: { ...activePlayer.statuses, [statusKey]: !current }
-        }
-      },
-      logs: addLog(roomData.logs, `${activePlayer.name} ${!current ? 'ได้รับ' : 'ถอด'}สถานะ [${statusKey}]`)
-    };
-    await persistRoomState(updated, { type: 'reversible' });
+    fireGameEvent(nextForm === 'hero' ? 'change_form_hero' : 'change_form_alter', `${activePlayer.name} เปลี่ยนร่าง`);
   };
 
   const playCardFromHand = async (instanceId) => {
@@ -1254,9 +1274,18 @@ function TabletopView({
 
     const remainingHand = activePlayer.hand.filter((c) => c.instanceId !== instanceId);
     const isPermanent = ['อัปเกรด (Upgrade)', 'สนับสนุน (Support)', 'พันธมิตร (Ally)'].includes(card.type);
+    const isAlly = card.type === 'พันธมิตร (Ally)';
 
     const nextPlayArea = isPermanent
-      ? [...activePlayer.playArea, { ...card, exhausted: false, counters: 0 }]
+      ? [
+          ...activePlayer.playArea,
+          {
+            ...card,
+            exhausted: false,
+            counters: 0,
+            allyHp: isAlly ? Number(card.hp || 3) : undefined
+          }
+        ]
       : activePlayer.playArea;
     const nextDiscard = !isPermanent ? [...activePlayer.discard, card] : activePlayer.discard;
 
@@ -1264,184 +1293,79 @@ function TabletopView({
       ...roomData,
       players: {
         ...players,
-        [playerId]: {
-          ...activePlayer,
-          hand: remainingHand,
-          playArea: nextPlayArea,
-          discard: nextDiscard
-        }
+        [playerId]: { ...activePlayer, hand: remainingHand, playArea: nextPlayArea, discard: nextDiscard }
       },
-      logs: addLog(roomData.logs, `🃏 ${activePlayer.name} เล่นการ์ด "${card.name}" (Cost ${card.cost})`)
-    };
-    await persistRoomState(updated, { type: 'reversible' });
-
-    if (card.traits?.includes('การโจมตี')) fireGameEvent('hero_attacks', `${activePlayer.name} ใช้การโจมตี "${card.name}"`);
-    if (card.traits?.includes('การขัดขวาง')) fireGameEvent('hero_thwarts', `${activePlayer.name} ใช้การขัดขวาง "${card.name}"`);
-  };
-
-  const discardCardFromHand = async (instanceId) => {
-    if (!isMe) return;
-    const card = activePlayer.hand.find((c) => c.instanceId === instanceId);
-    if (!card) return;
-    const updated = {
-      ...roomData,
-      players: {
-        ...players,
-        [playerId]: {
-          ...activePlayer,
-          hand: activePlayer.hand.filter((c) => c.instanceId !== instanceId),
-          discard: [...activePlayer.discard, card]
-        }
-      },
-      logs: addLog(roomData.logs, `🗑️ ${activePlayer.name} ทิ้งการ์ด "${card.name}" จากมือ (จ่ายทรัพยากร/ทิ้งการ์ด)`)
+      logs: addLog(roomData.logs, `🃏 ${activePlayer.name} เล่นการ์ด "${card.name}"`)
     };
     await persistRoomState(updated, { type: 'reversible' });
   };
 
-  const togglePlayAreaCardExhaust = async (instanceId) => {
-    if (!isMe) return;
-    const updated = {
-      ...roomData,
-      players: {
-        ...players,
-        [playerId]: {
-          ...activePlayer,
-          playArea: activePlayer.playArea.map((c) =>
-            c.instanceId === instanceId ? { ...c, exhausted: !c.exhausted } : c
-          )
-        }
-      }
-    };
-    await persistRoomState(updated, { type: 'reversible' });
-  };
-
-  const adjustPlayAreaCounter = async (instanceId, delta) => {
-    if (!isMe) return;
-    const updated = {
-      ...roomData,
-      players: {
-        ...players,
-        [playerId]: {
-          ...activePlayer,
-          playArea: activePlayer.playArea.map((c) =>
-            c.instanceId === instanceId ? { ...c, counters: Math.max(0, (c.counters || 0) + delta) } : c
-          )
-        }
-      }
-    };
-    await persistRoomState(updated, { type: 'reversible' });
-  };
-
-  const discardFromPlayArea = async (instanceId) => {
+  // Ally uses ATK or THW -> takes Consequential Damage
+  const useAllyAction = async (instanceId, mode) => {
     if (!isMe) return;
     const card = activePlayer.playArea.find((c) => c.instanceId === instanceId);
-    if (!card) return;
-    const updated = {
-      ...roomData,
-      players: {
-        ...players,
-        [playerId]: {
-          ...activePlayer,
-          playArea: activePlayer.playArea.filter((c) => c.instanceId !== instanceId),
-          discard: [...activePlayer.discard, card]
-        }
-      },
-      logs: addLog(roomData.logs, `📤 ${activePlayer.name} นำ "${card.name}" ออกจากสนามลงกองทิ้ง`)
-    };
-    await persistRoomState(updated, { type: 'reversible' });
-  };
+    if (!card || card.type !== 'พันธมิตร (Ally)') return;
 
-  // --- Irreversible Actions (Locks Fair Undo because secret info is drawn/revealed) ---
-  const drawCards = async (count = 1) => {
-    if (!isMe) return;
-    let deck = [...activePlayer.deck];
-    let discard = [...activePlayer.discard];
-    const drawn = [];
+    const cDamage = Number(card.consequentialDamage ?? 1);
+    const nextAllyHp = (card.allyHp ?? Number(card.hp || 3)) - cDamage;
 
-    for (let i = 0; i < count; i++) {
-      if (deck.length === 0 && discard.length > 0) {
-        deck = shuffleArray(discard);
-        discard = [];
-      }
-      if (deck.length > 0) {
-        drawn.push(deck.shift());
-      }
+    let nextPlayArea = [...activePlayer.playArea];
+    let nextDiscard = [...activePlayer.discard];
+    let logMsg = `🤝 พันธมิตร "${card.name}" ใช้ค่า ${mode === 'atk' ? `ATK ${card.atk || 0}` : `THW ${card.thw || 0}`} (รับ Consequential Damage ${cDamage})`;
+
+    if (nextAllyHp <= 0) {
+      nextPlayArea = nextPlayArea.filter((c) => c.instanceId !== instanceId);
+      nextDiscard = [...nextDiscard, card];
+      logMsg += ` → พลังชีวิตหมดและถูกทิ้งลงกองทิ้ง!`;
+    } else {
+      nextPlayArea = nextPlayArea.map((c) =>
+        c.instanceId === instanceId ? { ...c, exhausted: true, allyHp: nextAllyHp } : c
+      );
     }
 
     const updated = {
       ...roomData,
       players: {
         ...players,
-        [playerId]: {
-          ...activePlayer,
-          deck,
-          discard,
-          hand: [...activePlayer.hand, ...drawn]
-        }
+        [playerId]: { ...activePlayer, playArea: nextPlayArea, discard: nextDiscard }
       },
-      logs: addLog(roomData.logs, `🎴 ${activePlayer.name} จั่วการ์ด ${drawn.length} ใบ (ล็อก Undo)`)
+      logs: addLog(roomData.logs, logMsg)
     };
-    await persistRoomState(updated, {
-      type: 'irreversible',
-      reason: 'จั่วการ์ดขึ้นมือแล้ว ระบบล็อกการย้อนกลับเพื่อความยุติธรรม'
-    });
-    fireGameEvent('card_drawn', `${activePlayer.name} จั่วการ์ด ${drawn.length} ใบ`);
+    await persistRoomState(updated, { type: 'reversible' });
+    fireGameEvent(mode === 'atk' ? 'hero_attacks' : 'hero_thwarts', logMsg);
   };
 
-  const endPlayerPhaseReadyUp = async () => {
+  const drawCards = async (count = 1) => {
     if (!isMe) return;
-    const targetHandSize = Number(activePlayer.identity?.handSize || 5);
-    const needToDraw = Math.max(0, targetHandSize - activePlayer.hand.length);
-
     let deck = [...activePlayer.deck];
     let discard = [...activePlayer.discard];
     const drawn = [];
-    for (let i = 0; i < needToDraw; i++) {
+    for (let i = 0; i < count; i++) {
       if (deck.length === 0 && discard.length > 0) {
         deck = shuffleArray(discard);
         discard = [];
       }
       if (deck.length > 0) drawn.push(deck.shift());
     }
-
     const updated = {
       ...roomData,
-      players: {
-        ...players,
-        [playerId]: {
-          ...activePlayer,
-          exhausted: false,
-          deck,
-          discard,
-          hand: [...activePlayer.hand, ...drawn],
-          playArea: activePlayer.playArea.map((c) => ({ ...c, exhausted: false }))
-        }
-      },
-      logs: addLog(
-        roomData.logs,
-        `✨ ${activePlayer.name} จบเฟสผู้เล่น: ตั้งตรงการ์ดทั้งหมด และจั่วการ์ดเพิ่ม ${drawn.length} ใบ (ครบ ${targetHandSize} ใบ)`
-      )
+      players: { ...players, [playerId]: { ...activePlayer, deck, discard, hand: [...activePlayer.hand, ...drawn] } },
+      logs: addLog(roomData.logs, `🎴 ${activePlayer.name} จั่วการ์ด ${drawn.length} ใบ (ล็อก Undo)`)
     };
-    await persistRoomState(updated, {
-      type: 'irreversible',
-      reason: 'จบเฟสผู้เล่นและจั่วการ์ดจนเต็มขนาดมือแล้ว'
-    });
+    await persistRoomState(updated, { type: 'irreversible', reason: 'จั่วการ์ดขึ้นมือแล้ว ไม่สามารถย้อนกลับได้' });
   };
 
   const revealEncounterOrBoost = async (mode) => {
-    // mode: 'boost' | 'encounter'
     let encDeck = [...table.encounterDeck];
     let encDiscard = [...table.encounterDiscard];
-
     if (encDeck.length === 0 && encDiscard.length > 0) {
       encDeck = shuffleArray(encDiscard);
       encDiscard = [];
     }
     if (encDeck.length === 0) {
-      alert('กองการ์ดเผชิญภัยว่างเปล่า (กรุณาเพิ่มการ์ด Scenario / Side ในหน้า Admin)');
+      alert('กองการ์ดเผชิญภัยว่างเปล่า');
       return;
     }
-
     const revealed = encDeck.shift();
     const updated = {
       ...roomData,
@@ -1451,141 +1375,43 @@ function TabletopView({
         encounterDiscard: [...encDiscard, revealed],
         revealedEncounter: { ...revealed, mode }
       },
-      logs: addLog(
-        roomData.logs,
-        mode === 'boost'
-          ? `⚡ เปิดการ์ดบูสต์: "${revealed.name}" (+${revealed.boostIcons || 0} บูสต์)`
-          : `👁️ เปิดเผยการ์ดเผชิญภัย: "${revealed.name}" (${revealed.type})`
-      )
+      logs: addLog(roomData.logs, `👁️ เปิดการ์ด (${mode}): "${revealed.name}"`)
     };
-    await persistRoomState(updated, {
-      type: 'irreversible',
-      reason: 'เปิดเผยการ์ดจากกองเผชิญภัยแล้ว ไม่สามารถย้อนกลับได้'
-    });
-
-    if (mode === 'encounter') {
-      fireGameEvent('treachery_revealed', `เปิดเผยการ์ดเผชิญภัย "${revealed.name}"`);
-    }
-  };
-
-  const triggerVillainAttackAlert = () => {
-    fireGameEvent('enemy_attacks', `${table.villain.name} กำลังจะโจมตีใส่ ${activePlayer.name}!`);
-  };
-
-  const resolveTriggerAlert = async (alertObj) => {
-    const { card, alertId } = alertObj;
-    const val = Number(card.effectValue || 1);
-
-    if (card.effectAction === 'deal_damage_villain') await adjustVillainHp(-val);
-    if (card.effectAction === 'remove_threat_main') await adjustMainThreat(-val);
-    if (card.effectAction === 'heal_hero') await adjustPlayerHp(val);
-    if (card.effectAction === 'draw_cards') await drawCards(val);
-    if (card.effectAction === 'stun_villain') await toggleVillainStatus('stunned');
-    if (card.effectAction === 'confuse_villain') await toggleVillainStatus('confused');
-    if (card.effectAction === 'tough_hero') await togglePlayerStatus('tough');
-    if (card.effectAction === 'prevent_threat') await adjustMainThreat(-1);
-
-    setActiveTriggers((prev) => prev.filter((a) => a.alertId !== alertId));
-  };
-
-  const addSideScheme = async () => {
-    if (!newSideSchemeName.trim()) return;
-    const updated = {
-      ...roomData,
-      table: {
-        ...table,
-        sideSchemes: [
-          ...(table.sideSchemes || []),
-          { id: uid(), name: newSideSchemeName.trim(), threat: Number(newSideSchemeThreat) }
-        ]
-      },
-      logs: addLog(roomData.logs, `📌 เพิ่มแผนการรอง "${newSideSchemeName}" (${newSideSchemeThreat} ภัยคุกคาม)`)
-    };
-    setNewSideSchemeName('');
-    await persistRoomState(updated, { type: 'reversible' });
-  };
-
-  const adjustSideSchemeThreat = async (id, delta) => {
-    const updatedSchemes = (table.sideSchemes || [])
-      .map((s) => (s.id === id ? { ...s, threat: Math.max(0, s.threat + delta) } : s))
-      .filter((s) => s.threat > 0);
-    const updated = {
-      ...roomData,
-      table: { ...table, sideSchemes: updatedSchemes }
-    };
-    await persistRoomState(updated, { type: 'reversible' });
+    await persistRoomState(updated, { type: 'irreversible', reason: 'เปิดเผยการ์ดแล้ว ไม่สามารถย้อนกลับได้' });
   };
 
   return (
     <div className="space-y-4">
-      {/* SEMI-AUTOMATED TRIGGER ALERT BANNER */}
       {activeTriggers.length > 0 && (
-        <div className="bg-gradient-to-r from-indigo-950 via-purple-950 to-slate-900 border-2 border-amber-400 rounded-2xl p-4 shadow-2xl shadow-amber-500/20 space-y-3 animate-pulse">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-amber-300 font-extrabold">
-              <Zap className="w-5 h-5 text-amber-400" />
-              <span>แจ้งเตือนจังหวะใช้งานการ์ด! ({activeTriggers[0].contextLabel})</span>
+        <div className="bg-indigo-950/90 border-2 border-amber-400 rounded-2xl p-4 space-y-2">
+          <div className="flex items-center justify-between text-amber-300 font-bold text-sm">
+            <span className="flex items-center gap-1.5"><Zap className="w-4 h-4" /> แจ้งเตือน Trigger ({activeTriggers[0].contextLabel})</span>
+            <button onClick={() => setActiveTriggers([])} className="text-xs underline">ปิด</button>
+          </div>
+          {activeTriggers.map((t) => (
+            <div key={t.alertId} className="bg-slate-900 p-2.5 rounded-xl flex items-center justify-between text-xs">
+              <div><strong>{t.card.name}</strong>: {t.card.text}</div>
+              <button onClick={() => setActiveTriggers((p) => p.filter((x) => x.alertId !== t.alertId))} className="px-2.5 py-1 bg-amber-500 text-slate-950 font-bold rounded-lg">รับทราบ</button>
             </div>
-            <button
-              onClick={() => setActiveTriggers([])}
-              className="text-xs text-slate-300 hover:text-white underline"
-            >
-              ข้ามทั้งหมด
-            </button>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {activeTriggers.map((trig) => (
-              <div key={trig.alertId} className="bg-slate-900/90 border border-indigo-400/40 rounded-xl p-3 flex items-center justify-between gap-3">
-                <div>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">
-                    {trig.card.triggerTiming} • จาก{trig.card.zone}
-                  </span>
-                  <div className="font-bold text-sm text-white mt-1">{trig.card.name}</div>
-                  <p className="text-xs text-slate-300 line-clamp-2 mt-0.5">{trig.card.text}</p>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <button
-                    onClick={() => resolveTriggerAlert(trig)}
-                    className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg text-xs whitespace-nowrap"
-                  >
-                    ใช้งาน!
-                  </button>
-                  <button
-                    onClick={() => setActiveTriggers((prev) => prev.filter((a) => a.alertId !== trig.alertId))}
-                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs"
-                  >
-                    ไม่ใช้
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
       )}
 
-      {/* TOP BAR: FAIR UNDO & PLAYER SWITCHER */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-wrap items-center justify-between gap-3">
-        {/* Player Tabs */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-slate-400">กระดานผู้เล่น:</span>
           {Object.values(players).map((p) => (
             <button
               key={p.id}
               onClick={() => setViewingPlayerId(p.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition ${
-                activePlayer?.id === p.id
-                  ? 'bg-sky-500 text-slate-950 border-sky-400'
-                  : 'bg-slate-950 text-slate-300 border-slate-800 hover:border-slate-700'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold border ${
+                activePlayer?.id === p.id ? 'bg-sky-500 text-slate-950 border-sky-400' : 'bg-slate-950 text-slate-300 border-slate-800'
               }`}
             >
-              <span>{p.name}</span>
-              <span className="px-1.5 py-0.2 bg-black/20 rounded">HP {p.hp}</span>
-              <span className="px-1.5 py-0.2 bg-black/20 rounded">มือ {p.hand?.length || 0}</span>
+              {p.name} (HP {p.hp} • มือ {p.hand?.length || 0})
             </button>
           ))}
         </div>
 
-        {/* Fair Undo Control */}
         <div className="flex items-center gap-2">
           {undoLockedReason && (
             <span className="text-xs text-amber-400 flex items-center gap-1 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/30">
@@ -1595,10 +1421,8 @@ function TabletopView({
           <button
             onClick={handleUndo}
             disabled={undoStack.length === 0}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition ${
-              undoStack.length > 0
-                ? 'bg-slate-800 hover:bg-slate-700 text-emerald-300 border-emerald-500/40'
-                : 'bg-slate-950 text-slate-600 border-slate-800 cursor-not-allowed'
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border ${
+              undoStack.length > 0 ? 'bg-slate-800 text-emerald-300 border-emerald-500/40' : 'bg-slate-950 text-slate-600 border-slate-800 cursor-not-allowed'
             }`}
           >
             <Undo2 className="w-4 h-4" /> ย้อนกลับ ({undoStack.length})
@@ -1606,392 +1430,135 @@ function TabletopView({
         </div>
       </div>
 
-      {/* VILLAIN & SCHEME ZONE */}
-      <div className="grid lg:grid-cols-12 gap-4">
-        {/* Villain Card */}
-        <div className="lg:col-span-5 bg-slate-900 border border-rose-500/30 rounded-2xl p-4 flex gap-4">
-          <div
-            onClick={() => setInspectedCard(table.villain)}
-            className="w-32 aspect-[63/88] bg-slate-950 rounded-xl border border-slate-700 overflow-hidden flex-shrink-0 cursor-pointer hover:border-rose-400 transition flex items-center justify-center"
-          >
-            {table.villain.imageUrl ? (
-              <img src={table.villain.imageUrl} alt={table.villain.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-xs text-slate-500 text-center p-2">{table.villain.name}</span>
-            )}
+      {/* Villain & Main Scheme */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="bg-slate-900 border border-rose-500/30 rounded-2xl p-4 flex gap-3">
+          <div onClick={() => setInspectedCard(table.villain)} className="w-24 aspect-[63/88] bg-slate-950 rounded-xl overflow-hidden cursor-pointer flex-shrink-0">
+            {table.villain.imageUrl && <img src={table.villain.imageUrl} alt="" className="w-full h-full object-cover" />}
           </div>
-          <div className="flex-1 flex flex-col justify-between space-y-2">
+          <div className="flex-1 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold">
-                  วายร้าย • สเตจ {table.villain.stage || 1}
-                </span>
-                <button
-                  onClick={advanceVillainStage}
-                  className="text-xs px-2 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 rounded-lg"
-                >
-                  เลื่อนสเตจ →
-                </button>
-              </div>
-              <h3 className="text-lg font-extrabold text-white mt-1">{table.villain.name}</h3>
-              <div className="text-xs text-slate-400">
-                SCH: <strong className="text-amber-300">{table.villain.sch || 0}</strong> • ATK:{' '}
-                <strong className="text-rose-300">{table.villain.atk || 0}</strong>
-              </div>
+              <div className="text-xs text-rose-300 font-bold">วายร้าย ({numPlayers} ผู้เล่น)</div>
+              <div className="font-extrabold text-base">{table.villain.name}</div>
             </div>
-
-            {/* Villain HP Counter */}
-            <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-              <span className="text-xs text-slate-400">พลังชีวิต (HP)</span>
-              <div className="flex items-center gap-2">
-                <button onClick={() => adjustVillainHp(-1)} className="w-7 h-7 rounded-lg bg-rose-600 hover:bg-rose-500 font-bold">-1</button>
-                <span className="text-xl font-black text-rose-400 w-14 text-center">{table.villain.currentHp}</span>
-                <button onClick={() => adjustVillainHp(1)} className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 font-bold">+1</button>
-              </div>
-            </div>
-
-            {/* Villain Statuses & Attack Trigger */}
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { key: 'stunned', label: 'มึนงง (Stun)' },
-                { key: 'confused', label: 'สับสน (Confuse)' },
-                { key: 'tough', label: 'คงกระพัน (Tough)' }
-              ].map((st) => (
-                <button
-                  key={st.key}
-                  onClick={() => toggleVillainStatus(st.key)}
-                  className={`px-2 py-1 rounded-lg text-[11px] font-bold border ${
-                    table.villain.statuses?.[st.key]
-                      ? 'bg-amber-500 text-slate-950 border-amber-400'
-                      : 'bg-slate-950 text-slate-400 border-slate-800'
-                  }`}
-                >
-                  {st.label}
-                </button>
-              ))}
-              <button
-                onClick={triggerVillainAttackAlert}
-                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-600/30 border border-rose-500/50 text-rose-200 hover:bg-rose-600/50"
-              >
-                ⚔️ วายร้ายโจมตี!
-              </button>
+            <div className="flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800">
+              <button onClick={() => adjustVillainHp(-1)} className="w-7 h-7 bg-rose-600 rounded font-bold">-1</button>
+              <span className="font-black text-rose-400">HP {table.villain.currentHp}</span>
+              <button onClick={() => adjustVillainHp(1)} className="w-7 h-7 bg-slate-800 rounded font-bold">+1</button>
             </div>
           </div>
         </div>
 
-        {/* Main Scheme & Side Schemes */}
-        <div className="lg:col-span-4 bg-slate-900 border border-amber-500/30 rounded-2xl p-4 flex flex-col justify-between space-y-3">
+        <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-4 flex flex-col justify-between">
           <div>
-            <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold">แผนการหลัก (Main Scheme)</span>
-            <h3 className="text-base font-bold text-white mt-1">{table.mainScheme.name}</h3>
-            <div className="mt-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
-              <span className="text-xs text-slate-400">แต้มภัยคุกคาม</span>
-              <div className="flex items-center gap-2">
-                <button onClick={() => adjustMainThreat(-1)} className="w-7 h-7 rounded-lg bg-sky-600 hover:bg-sky-500 font-bold">-1</button>
-                <span className="text-lg font-black text-amber-400">
-                  {table.mainScheme.threat} / {table.mainScheme.threshold}
-                </span>
-                <button onClick={() => adjustMainThreat(1)} className="w-7 h-7 rounded-lg bg-amber-600 hover:bg-amber-500 font-bold">+1</button>
-              </div>
-            </div>
+            <div className="text-xs text-amber-300 font-bold">แผนการหลัก</div>
+            <div className="font-bold text-base">{table.mainScheme.name}</div>
           </div>
-
-          {/* Side Schemes */}
-          <div className="space-y-1.5">
-            <div className="text-xs font-bold text-slate-400">แผนการรอง (Side Schemes)</div>
-            {(table.sideSchemes || []).map((ss) => (
-              <div key={ss.id} className="flex items-center justify-between bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800 text-xs">
-                <span className="truncate font-medium">{ss.name}</span>
-                <div className="flex items-center gap-1.5">
-                  <button onClick={() => adjustSideSchemeThreat(ss.id, -1)} className="px-1.5 py-0.5 bg-sky-600 rounded">-1</button>
-                  <span className="font-bold text-amber-300">{ss.threat}</span>
-                  <button onClick={() => adjustSideSchemeThreat(ss.id, 1)} className="px-1.5 py-0.5 bg-amber-600 rounded">+1</button>
-                </div>
-              </div>
-            ))}
-            <div className="flex gap-1.5 pt-1">
-              <input
-                type="text"
-                value={newSideSchemeName}
-                onChange={(e) => setNewSideSchemeName(e.target.value)}
-                placeholder="ชื่อแผนการรอง..."
-                className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs"
-              />
-              <input
-                type="number"
-                value={newSideSchemeThreat}
-                onChange={(e) => setNewSideSchemeThreat(e.target.value)}
-                className="w-12 bg-slate-950 border border-slate-800 rounded-lg px-1.5 py-1 text-xs text-center"
-              />
-              <button onClick={addSideScheme} className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold">
-                + เพิ่ม
-              </button>
-            </div>
+          <div className="flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800">
+            <button onClick={() => adjustMainThreat(-1)} className="w-7 h-7 bg-sky-600 rounded font-bold">-1</button>
+            <span className="font-black text-amber-400">{table.mainScheme.threat} / {table.mainScheme.threshold}</span>
+            <button onClick={() => adjustMainThreat(1)} className="w-7 h-7 bg-amber-600 rounded font-bold">+1</button>
           </div>
         </div>
 
-        {/* Encounter Deck & Revealed Card */}
-        <div className="lg:col-span-3 bg-slate-900 border border-purple-500/30 rounded-2xl p-4 flex flex-col justify-between space-y-3">
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-purple-300">กองเผชิญภัย ({table.encounterDeck?.length || 0} ใบ)</span>
-              <span className="text-xs text-slate-400">กองทิ้ง ({table.encounterDiscard?.length || 0})</span>
+        <div className="bg-slate-900 border border-purple-500/30 rounded-2xl p-4 flex flex-col justify-between">
+          <div className="text-xs text-purple-300 font-bold">กองเผชิญภัย ({table.encounterDeck?.length || 0} ใบ)</div>
+          {table.revealedEncounter && (
+            <div onClick={() => setInspectedCard(table.revealedEncounter)} className="text-xs bg-slate-950 p-2 rounded-lg border border-purple-500/30 cursor-pointer">
+              เปิดล่าสุด: <strong>{table.revealedEncounter.name}</strong>
             </div>
-
-            {table.revealedEncounter ? (
-              <div
-                onClick={() => setInspectedCard(table.revealedEncounter)}
-                className="mt-2 p-2.5 bg-slate-950 border border-purple-500/40 rounded-xl cursor-pointer hover:border-purple-400"
-              >
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-bold">
-                  {table.revealedEncounter.mode === 'boost' ? 'การ์ดบูสต์ (Boost)' : 'เปิดเผย (Revealed)'}
-                </span>
-                <div className="font-bold text-sm mt-1">{table.revealedEncounter.name}</div>
-                <p className="text-xs text-slate-400 line-clamp-2 mt-0.5">{table.revealedEncounter.text}</p>
-              </div>
-            ) : (
-              <div className="mt-2 h-24 bg-slate-950 border border-dashed border-slate-800 rounded-xl flex items-center justify-center text-xs text-slate-500">
-                ยังไม่มีการ์ดเผชิญภัยที่เปิดเผย
-              </div>
-            )}
-          </div>
-
+          )}
           <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => revealEncounterOrBoost('boost')}
-              className="py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 font-bold rounded-xl text-xs"
-            >
-              ⚡ เปิดการ์ดบูสต์
-            </button>
-            <button
-              onClick={() => revealEncounterOrBoost('encounter')}
-              className="py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl text-xs"
-            >
-              👁️ เปิดเผชิญภัย
-            </button>
+            <button onClick={() => revealEncounterOrBoost('boost')} className="py-2 bg-amber-500/20 border border-amber-500/40 text-amber-200 rounded-xl text-xs font-bold">⚡ เปิดบูสต์</button>
+            <button onClick={() => revealEncounterOrBoost('encounter')} className="py-2 bg-purple-600 text-white rounded-xl text-xs font-bold">👁️ เปิดเผชิญภัย</button>
           </div>
         </div>
       </div>
 
-      {/* PLAYER HERO & PLAY AREA */}
+      {/* Player Area */}
       {activePlayer && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Hero / Alter-Ego Identity Card */}
-            <div className="flex gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800 md:w-96 flex-shrink-0">
-              <div
-                onClick={() => setInspectedCard(activePlayer.identity)}
-                className={`w-28 aspect-[63/88] bg-slate-900 rounded-xl border border-slate-700 overflow-hidden flex-shrink-0 cursor-pointer transition-transform ${
-                  activePlayer.exhausted ? 'rotate-6 opacity-75 ring-2 ring-amber-500' : ''
-                }`}
-              >
-                {activePlayer.identity?.imageUrl ? (
-                  <img src={activePlayer.identity.imageUrl} alt={activePlayer.identity.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="p-2 text-center text-xs text-slate-500">{activePlayer.identity?.name}</div>
-                )}
+            <div className="flex gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800 md:w-80 flex-shrink-0">
+              <div onClick={() => setInspectedCard(activePlayer.identity)} className="w-24 aspect-[63/88] bg-slate-900 rounded-xl overflow-hidden cursor-pointer flex-shrink-0">
+                {activePlayer.identity?.imageUrl && <img src={activePlayer.identity.imageUrl} alt="" className="w-full h-full object-cover" />}
               </div>
-
               <div className="flex-1 flex flex-col justify-between">
                 <div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
-                    activePlayer.form === 'hero' ? 'bg-rose-500/20 text-rose-300' : 'bg-sky-500/20 text-sky-300'
-                  }`}>
-                    {activePlayer.form === 'hero' ? 'ร่างฮีโร่ (Hero)' : 'ร่างพลเรือน (Alter-Ego)'}
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold">
+                    {activePlayer.form === 'hero' ? 'ร่างฮีโร่' : 'ร่างพลเรือน'}
                   </span>
-                  <h4 className="font-extrabold text-base mt-1">{activePlayer.identity?.name}</h4>
-                  <div className="text-xs text-slate-400 mt-0.5">
-                    {activePlayer.form === 'hero'
-                      ? `THW ${activePlayer.identity?.thw || 0} • ATK ${activePlayer.identity?.atk || 0} • DEF ${activePlayer.identity?.def || 0}`
-                      : `REC ${activePlayer.identity?.rec || 0} • ขนาดมือ ${activePlayer.identity?.handSize || 6}`}
-                  </div>
+                  <div className="font-bold text-sm mt-1">{activePlayer.identity?.name}</div>
                 </div>
-
-                {/* Hero HP */}
-                <div className="flex items-center justify-between bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-800">
-                  <span className="text-xs text-slate-400">HP</span>
-                  <div className="flex items-center gap-1.5">
-                    <button disabled={!isMe} onClick={() => adjustPlayerHp(-1)} className="w-6 h-6 bg-rose-600 rounded font-bold text-xs">-1</button>
-                    <span className="font-black text-emerald-400 text-sm">{activePlayer.hp}/{activePlayer.maxHp}</span>
-                    <button disabled={!isMe} onClick={() => adjustPlayerHp(1)} className="w-6 h-6 bg-emerald-600 rounded font-bold text-xs">+1</button>
-                  </div>
+                <div className="flex items-center justify-between bg-slate-900 px-2 py-1 rounded-lg text-xs">
+                  <button disabled={!isMe} onClick={() => adjustPlayerHp(-1)} className="px-1.5 bg-rose-600 rounded">-</button>
+                  <span className="font-bold text-emerald-400">HP {activePlayer.hp}/{activePlayer.maxHp}</span>
+                  <button disabled={!isMe} onClick={() => adjustPlayerHp(1)} className="px-1.5 bg-emerald-600 rounded">+</button>
                 </div>
-
-                {/* Flip & Exhaust Buttons */}
                 {isMe && (
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      onClick={flipIdentityForm}
-                      className="py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs"
-                    >
-                      🔄 พลิกร่าง
-                    </button>
-                    <button
-                      onClick={toggleIdentityExhaust}
-                      className="py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold rounded-lg text-xs"
-                    >
-                      {activePlayer.exhausted ? 'ตั้งตรง' : 'ตะแคง'}
-                    </button>
-                  </div>
+                  <button onClick={flipIdentityForm} className="py-1.5 bg-indigo-600 rounded-lg text-xs font-bold">🔄 พลิกร่าง</button>
                 )}
               </div>
             </div>
 
-            {/* Upgrades, Supports & Allies in Play */}
-            <div className="flex-1 bg-slate-950 p-3 rounded-2xl border border-slate-800 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-400">
-                    พื้นที่สนาม: อัปเกรด / สนับสนุน / พันธมิตร ({activePlayer.playArea?.length || 0} ใบ)
-                  </span>
-                  <div className="flex gap-1.5">
-                    {['stunned', 'confused', 'tough'].map((st) => (
-                      <button
-                        key={st}
-                        disabled={!isMe}
-                        onClick={() => togglePlayerStatus(st)}
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                          activePlayer.statuses?.[st]
-                            ? 'bg-emerald-500 text-slate-950 border-emerald-400'
-                            : 'bg-slate-900 text-slate-500 border-slate-800'
-                        }`}
-                      >
-                        {st === 'stunned' ? 'มึนงง' : st === 'confused' ? 'สับสน' : 'คงกระพัน'}
-                      </button>
-                    ))}
+            <div className="flex-1 bg-slate-950 p-3 rounded-2xl border border-slate-800 space-y-3">
+              <div className="text-xs font-bold text-slate-400">บนสนาม ({activePlayer.playArea?.length || 0} ใบ)</div>
+              <div className="flex gap-2.5 overflow-x-auto pb-2">
+                {(activePlayer.playArea || []).map((card) => (
+                  <div key={card.instanceId} className={`w-32 flex-shrink-0 bg-slate-900 border rounded-xl p-2 space-y-1.5 ${card.exhausted ? 'opacity-65 border-amber-500/50' : 'border-slate-700'}`}>
+                    <div onClick={() => setInspectedCard(card)} className="cursor-pointer">
+                      <div className="text-xs font-bold truncate">{card.name}</div>
+                      <div className="text-[10px] text-slate-400">{card.type.split(' ')[0]}</div>
+                    </div>
+                    {card.type === 'พันธมิตร (Ally)' && (
+                      <div className="space-y-1">
+                        <div className="text-[10px] text-emerald-300 font-bold">
+                          HP: {card.allyHp ?? card.hp} • CD: {card.consequentialDamage ?? 1}
+                        </div>
+                        {isMe && !card.exhausted && (
+                          <div className="grid grid-cols-2 gap-1">
+                            <button onClick={() => useAllyAction(card.instanceId, 'thw')} className="py-1 bg-sky-600 rounded text-[10px] font-bold">
+                              THW {card.thw || 0}
+                            </button>
+                            <button onClick={() => useAllyAction(card.instanceId, 'atk')} className="py-1 bg-rose-600 rounded text-[10px] font-bold">
+                              ATK {card.atk || 0}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                <div className="flex gap-2.5 overflow-x-auto pb-2 min-h-[120px]">
-                  {(activePlayer.playArea || []).map((card) => (
-                    <div
-                      key={card.instanceId}
-                      className={`w-28 flex-shrink-0 bg-slate-900 border rounded-xl p-2 flex flex-col justify-between transition ${
-                        card.exhausted ? 'border-amber-500/60 opacity-75' : 'border-slate-700'
-                      }`}
-                    >
-                      <div onClick={() => setInspectedCard(card)} className="cursor-pointer">
-                        <div className="text-[11px] font-bold truncate text-white">{card.name}</div>
-                        <div className="text-[10px] text-slate-400">{card.type.split(' ')[0]}</div>
-                      </div>
-
-                      <div className="flex items-center justify-between my-1 text-xs bg-slate-950 px-1.5 py-0.5 rounded">
-                        <span className="text-[10px] text-slate-400">ตัวนับ</span>
-                        <div className="flex items-center gap-1">
-                          <button disabled={!isMe} onClick={() => adjustPlayAreaCounter(card.instanceId, -1)} className="text-slate-400 hover:text-white">-</button>
-                          <span className="font-bold text-amber-300">{card.counters || 0}</span>
-                          <button disabled={!isMe} onClick={() => adjustPlayAreaCounter(card.instanceId, 1)} className="text-slate-400 hover:text-white">+</button>
-                        </div>
-                      </div>
-
-                      {isMe && (
-                        <div className="grid grid-cols-2 gap-1">
-                          <button
-                            onClick={() => togglePlayAreaCardExhaust(card.instanceId)}
-                            className="py-1 bg-slate-800 hover:bg-slate-700 rounded text-[10px] text-amber-300"
-                          >
-                            {card.exhausted ? 'ตั้งตรง' : 'ตะแคง'}
-                          </button>
-                          <button
-                            onClick={() => discardFromPlayArea(card.instanceId)}
-                            className="py-1 bg-rose-950/60 hover:bg-rose-900/60 rounded text-[10px] text-rose-300"
-                          >
-                            ทิ้ง
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  {(activePlayer.playArea || []).length === 0 && (
-                    <div className="flex-1 flex items-center justify-center text-xs text-slate-600">
-                      ยังไม่มีการ์ดอัปเกรด สนับสนุน หรือพันธมิตรบนสนาม
-                    </div>
-                  )}
-                </div>
+                ))}
               </div>
-
-              {/* Deck & Phase Controls */}
               {isMe && (
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800">
-                  <div className="text-xs text-slate-400">
-                    กองจั่ว: <strong className="text-white">{activePlayer.deck?.length || 0}</strong> • กองทิ้ง:{' '}
-                    <strong className="text-white">{activePlayer.discard?.length || 0}</strong>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => drawCards(1)}
-                      className="px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs"
-                    >
-                      + จั่วการ์ด 1 ใบ
-                    </button>
-                    <button
-                      onClick={endPlayerPhaseReadyUp}
-                      className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs"
-                    >
-                      จบเทิร์น (ตั้งตรง + จั่วเต็มมือ)
-                    </button>
-                  </div>
+                <div className="flex justify-end">
+                  <button onClick={() => drawCards(1)} className="px-3 py-1.5 bg-sky-500 text-slate-950 font-bold rounded-xl text-xs">
+                    + จั่วการ์ด 1 ใบ
+                  </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* PLAYER HAND */}
           <div className="bg-slate-950 p-3 rounded-2xl border border-slate-800">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-amber-300">
-                การ์ดในมือของ {activePlayer.name} ({activePlayer.hand?.length || 0} ใบ)
-              </span>
-              {!isMe && <span className="text-xs text-slate-500">(ซ่อนหน้าการ์ดในมือของเพื่อน)</span>}
-            </div>
-
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="text-xs font-bold text-amber-300 mb-2">มือของ {activePlayer.name} ({activePlayer.hand?.length || 0} ใบ)</div>
+            <div className="flex gap-2.5 overflow-x-auto pb-2">
               {(activePlayer.hand || []).map((card) =>
                 isMe ? (
-                  <div
-                    key={card.instanceId}
-                    className="w-36 flex-shrink-0 bg-slate-900 border border-slate-700 hover:border-amber-400 rounded-xl p-2 flex flex-col justify-between transition"
-                  >
-                    <div onClick={() => setInspectedCard(card)} className="cursor-pointer space-y-1.5">
-                      <div className="aspect-[63/88] bg-slate-950 rounded-lg overflow-hidden flex items-center justify-center">
-                        {card.imageUrl ? (
-                          <img src={card.imageUrl} alt={card.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-[11px] text-center p-2 text-slate-400">{card.name}</span>
-                        )}
+                  <div key={card.instanceId} className="w-32 flex-shrink-0 bg-slate-900 border border-slate-700 rounded-xl p-2 flex flex-col justify-between">
+                    <div onClick={() => setInspectedCard(card)} className="cursor-pointer space-y-1">
+                      <div className="aspect-[63/88] bg-slate-950 rounded overflow-hidden">
+                        {card.imageUrl && <img src={card.imageUrl} alt="" className="w-full h-full object-cover" />}
                       </div>
-                      <div className="font-bold text-xs truncate text-white">{card.name}</div>
-                      <div className="flex items-center justify-between text-[10px] text-slate-400">
-                        <span>Cost: {card.cost}</span>
-                        <span>
-                          {card.resources?.red ? `🔴${card.resources.red}` : ''}
-                          {card.resources?.blue ? `🔵${card.resources.blue}` : ''}
-                          {card.resources?.yellow ? `🟡${card.resources.yellow}` : ''}
-                          {card.resources?.wild ? `🌈${card.resources.wild}` : ''}
-                        </span>
-                      </div>
+                      <div className="text-xs font-bold truncate">{card.name}</div>
+                      <div className="text-[10px] text-slate-400">Cost {card.cost}</div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-1 mt-2">
-                      <button
-                        onClick={() => playCardFromHand(card.instanceId)}
-                        className="py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded text-[11px]"
-                      >
-                        เล่นการ์ด
-                      </button>
-                      <button
-                        onClick={() => discardCardFromHand(card.instanceId)}
-                        className="py-1 bg-slate-800 hover:bg-rose-900/60 text-slate-300 rounded text-[11px]"
-                      >
-                        ทิ้ง/จ่าย
-                      </button>
-                    </div>
+                    <button onClick={() => playCardFromHand(card.instanceId)} className="mt-2 py-1 bg-amber-500 text-slate-950 font-bold rounded text-[11px]">
+                      เล่นการ์ด
+                    </button>
                   </div>
                 ) : (
-                  <div
-                    key={card.instanceId}
-                    className="w-24 aspect-[63/88] flex-shrink-0 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-xl flex items-center justify-center text-xs font-bold text-slate-500"
-                  >
+                  <div key={card.instanceId} className="w-20 aspect-[63/88] flex-shrink-0 bg-slate-800 border border-slate-700 rounded-xl flex items-center justify-center text-xs font-bold text-slate-500">
                     GOK
                   </div>
                 )
@@ -1999,9 +1566,7 @@ function TabletopView({
             </div>
           </div>
 
-          {/* ACTION LOG */}
-          <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 max-h-36 overflow-y-auto space-y-1 text-xs">
-            <div className="font-bold text-slate-400 mb-1">บันทึกเหตุการณ์ในห้อง (Game Log)</div>
+          <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 max-h-32 overflow-y-auto space-y-1 text-xs">
             {[...(roomData.logs || [])].reverse().map((log) => (
               <div key={log.id} className="text-slate-300">
                 <span className="text-slate-500 font-mono mr-2">[{log.time}]</span>
@@ -2016,9 +1581,9 @@ function TabletopView({
 }
 
 // ============================================================================
-// 3. CUSTOM DECK BUILDER VIEW (40-50 CARDS)
+// 3. DECK BUILDER VIEW
 // ============================================================================
-function DeckBuilderView({ cards, starterDecks, customDecks, saveCustomDecks, setInspectedCard }) {
+function DeckBuilderView({ cards, customDecks, saveCustomDecks, setInspectedCard }) {
   const heroIdentities = cards.filter((c) => c.category === 'Hero' && c.type.includes('ร่างฮีโร่'));
   const [selectedHeroId, setSelectedHeroId] = useState(heroIdentities[0]?.id || '');
   const [chosenAspect, setChosenAspect] = useState('Aggression');
@@ -2030,7 +1595,6 @@ function DeckBuilderView({ cards, starterDecks, customDecks, saveCustomDecks, se
     (c) => c.category === 'Hero' && c.type.includes('ร่างพลเรือน') && c.heroOwner === selectedHero?.heroOwner
   );
 
-  // 15-Card Hero Signature Kit
   const heroKitCards = cards.filter(
     (c) =>
       c.category === 'Hero' &&
@@ -2041,30 +1605,13 @@ function DeckBuilderView({ cards, starterDecks, customDecks, saveCustomDecks, se
 
   const heroKitExpanded = [];
   heroKitCards.forEach((c) => {
-    const qty = Number(c.maxCopies || 1);
-    for (let i = 0; i < qty; i++) heroKitExpanded.push(c.id);
+    for (let i = 0; i < Number(c.maxCopies || 1); i++) heroKitExpanded.push(c.id);
   });
 
   const poolCards = cards.filter(
     (c) => c.category === 'Aspect' && (c.aspect === chosenAspect || c.aspect === 'Basics')
   );
-
   const totalCards = heroKitExpanded.length + addedAspectCardIds.length;
-
-  const addCardToDeck = (card) => {
-    const currentCount = addedAspectCardIds.filter((id) => id === card.id).length;
-    if (currentCount >= Number(card.maxCopies || 3)) return;
-    if (totalCards >= 50) return;
-    setAddedAspectCardIds((prev) => [...prev, card.id]);
-  };
-
-  const removeCardFromDeck = (cardId) => {
-    const idx = addedAspectCardIds.indexOf(cardId);
-    if (idx === -1) return;
-    const copy = [...addedAspectCardIds];
-    copy.splice(idx, 1);
-    setAddedAspectCardIds(copy);
-  };
 
   const handleSaveCustomDeck = () => {
     if (!selectedHero) return;
@@ -2086,10 +1633,8 @@ function DeckBuilderView({ cards, starterDecks, customDecks, saveCustomDecks, se
 
   return (
     <div className="grid lg:grid-cols-12 gap-6">
-      {/* Left: Pool */}
       <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-        <h2 className="text-lg font-bold text-sky-300">คลังการ์ดสำหรับจัดเด็ค (Custom Deck Builder)</h2>
-
+        <h2 className="text-lg font-bold text-sky-300">จัดเด็คเอง (Custom Deck Builder)</h2>
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-slate-400 block mb-1">เลือกฮีโร่หลัก</label>
@@ -2107,7 +1652,6 @@ function DeckBuilderView({ cards, starterDecks, customDecks, saveCustomDecks, se
               ))}
             </select>
           </div>
-
           <div>
             <label className="text-xs text-slate-400 block mb-1">เลือกสายพลัง (Aspect)</label>
             <select
@@ -2125,75 +1669,75 @@ function DeckBuilderView({ cards, starterDecks, customDecks, saveCustomDecks, se
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-2.5 max-h-[500px] overflow-y-auto pr-1">
+        <div className="grid sm:grid-cols-2 gap-2.5 max-h-96 overflow-y-auto">
           {poolCards.map((card) => {
             const count = addedAspectCardIds.filter((id) => id === card.id).length;
             return (
-              <div key={card.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
+              <div key={card.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
                 <div onClick={() => setInspectedCard(card)} className="cursor-pointer min-w-0">
                   <div className="font-bold text-sm truncate">{card.name}</div>
-                  <div className="text-xs text-slate-400">
-                    Cost {card.cost} • {card.aspect} • {card.type.split(' ')[0]}
-                  </div>
+                  <div className="text-xs text-slate-400">Cost {card.cost} • {card.type.split(' ')[0]}</div>
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <button onClick={() => removeCardFromDeck(card.id)} className="w-7 h-7 bg-slate-800 rounded-lg font-bold">-</button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      const idx = addedAspectCardIds.indexOf(card.id);
+                      if (idx !== -1) {
+                        const cp = [...addedAspectCardIds];
+                        cp.splice(idx, 1);
+                        setAddedAspectCardIds(cp);
+                      }
+                    }}
+                    className="w-7 h-7 bg-slate-800 rounded-lg font-bold"
+                  >-</button>
                   <span className="text-xs font-bold w-8 text-center">{count}/{card.maxCopies || 3}</span>
-                  <button onClick={() => addCardToDeck(card)} className="w-7 h-7 bg-sky-500 text-slate-950 rounded-lg font-bold">+</button>
+                  <button
+                    onClick={() => {
+                      if (count < Number(card.maxCopies || 3) && totalCards < 50) {
+                        setAddedAspectCardIds([...addedAspectCardIds, card.id]);
+                      }
+                    }}
+                    className="w-7 h-7 bg-sky-500 text-slate-950 rounded-lg font-bold"
+                  >+</button>
                 </div>
               </div>
             );
           })}
-          {poolCards.length === 0 && (
-            <div className="col-span-2 text-center py-8 text-xs text-slate-500">
-              ยังไม่มีการ์ดสาย {chosenAspect} หรือ Basics ในฐานข้อมูล (เพิ่มได้ที่หน้า Admin Studio)
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Right: Current Deck & Saved Decks */}
       <div className="lg:col-span-5 space-y-4">
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-base">รายการการ์ดในเด็ค</h3>
-            <span className={`text-sm font-black ${totalCards >= 40 && totalCards <= 50 ? 'text-emerald-400' : 'text-amber-400'}`}>
+            <h3 className="font-bold">เด็คของคุณ</h3>
+            <span className={`font-black ${totalCards >= 40 && totalCards <= 50 ? 'text-emerald-400' : 'text-amber-400'}`}>
               {totalCards} / 40–50 ใบ
             </span>
           </div>
-
           <input
             type="text"
             value={deckName}
             onChange={(e) => setDeckName(e.target.value)}
-            placeholder="ตั้งชื่อ Custom Deck ของคุณ..."
+            placeholder="ตั้งชื่อ Custom Deck..."
             className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
           />
-
           <div className="text-xs text-amber-300 bg-amber-500/10 px-3 py-2 rounded-xl border border-amber-500/30">
-            ชุดการ์ดประจำตัวฮีโร่: {heroKitExpanded.length} ใบ (ดึงให้อัตโนมัติ)
+            ชุดประจำตัวฮีโร่: {heroKitExpanded.length} ใบ
           </div>
-
-          <button
-            onClick={handleSaveCustomDeck}
-            className="w-full py-2.5 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl text-sm"
-          >
+          <button onClick={handleSaveCustomDeck} className="w-full py-2.5 bg-sky-500 text-slate-950 font-bold rounded-xl text-sm">
             บันทึก Custom Deck
           </button>
         </div>
 
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
-          <h3 className="font-bold text-sm text-slate-300">Custom Decks ที่บันทึกไว้ ({customDecks.length})</h3>
+          <h3 className="font-bold text-sm">Custom Decks ที่บันทึกไว้ ({customDecks.length})</h3>
           {customDecks.map((d) => (
             <div key={d.id} className="flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs">
               <div>
                 <div className="font-bold">{d.name}</div>
                 <div className="text-slate-400">{d.cardIds.length} ใบ</div>
               </div>
-              <button
-                onClick={() => saveCustomDecks(customDecks.filter((x) => x.id !== d.id))}
-                className="p-1.5 text-rose-400 hover:bg-rose-950/50 rounded-lg"
-              >
+              <button onClick={() => saveCustomDecks(customDecks.filter((x) => x.id !== d.id))} className="text-rose-400 p-1">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
@@ -2205,7 +1749,7 @@ function DeckBuilderView({ cards, starterDecks, customDecks, saveCustomDecks, se
 }
 
 // ============================================================================
-// 4. ADMIN CARD STUDIO VIEW (FULL CARD EDITOR + 4-STEP RULE BUILDER + STARTERS)
+// 4. ADMIN CARD STUDIO VIEW (TYPE-FIRST DYNAMIC FIELDS + ALLY CONSEQUENTIAL DMG)
 // ============================================================================
 function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDecks, setInspectedCard }) {
   const [form, setForm] = useState(emptyCardForm);
@@ -2213,23 +1757,22 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Starter Deck Creator State inside Admin
   const [starterName, setStarterName] = useState('');
   const [starterHeroId, setStarterHeroId] = useState('');
   const [starterAspect, setStarterAspect] = useState('Aggression');
   const [starterCardIds, setStarterCardIds] = useState([]);
 
+  // Determine which fields to show based on selected card type
+  const fields = TYPE_FIELD_CONFIG[form.type] || TYPE_FIELD_CONFIG['เหตุการณ์ (Event)'];
+
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      setForm((prev) => ({ ...prev, imageUrl: reader.result }));
-    };
+    reader.onload = () => setForm((prev) => ({ ...prev, imageUrl: reader.result }));
     reader.readAsDataURL(file);
   };
 
-  // Batch Import multiple PNG files at once as draft cards
   const handleBatchImageImport = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -2240,14 +1783,14 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
           new Promise((resolve) => {
             const reader = new FileReader();
             reader.onload = () => {
-              const baseName = file.name.replace(/\.[^/.]+$/, '');
               resolve({
                 ...emptyCardForm,
                 id: 'CARD-' + uid(),
-                name: baseName,
+                name: file.name.replace(/\.[^/.]+$/, ''),
                 category: form.category,
                 series: form.series,
                 aspect: form.aspect,
+                type: form.type,
                 heroOwner: form.heroOwner,
                 setGroup: form.setGroup,
                 imageUrl: reader.result
@@ -2258,7 +1801,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
       )
     ).then((newCards) => {
       saveCardDatabase([...cards, ...newCards]);
-      alert(`นำเข้ารูปภาพการ์ด ${newCards.length} ใบเรียบร้อย! คลิกที่การ์ดแต่ละใบเพื่อกรอกค่าพลังและความสามารถต่อได้เลยครับ`);
+      alert(`นำเข้ารูปภาพการ์ด ${newCards.length} ใบเรียบร้อย!`);
     });
   };
 
@@ -2270,17 +1813,18 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
     }
 
     if (editingId) {
-      const updated = cards.map((c) => (c.id === editingId ? { ...form, id: editingId } : c));
-      saveCardDatabase(updated);
+      saveCardDatabase(cards.map((c) => (c.id === editingId ? { ...form, id: editingId } : c)));
       setEditingId(null);
     } else {
       saveCardDatabase([...cards, { ...form, id: 'CARD-' + uid() }]);
     }
+
     setForm((prev) => ({
       ...emptyCardForm,
       series: prev.series,
       category: prev.category,
       aspect: prev.aspect,
+      type: prev.type,
       heroOwner: prev.heroOwner,
       setGroup: prev.setGroup
     }));
@@ -2297,10 +1841,9 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
     saveCardDatabase(cards.filter((c) => c.id !== id));
   };
 
-  // Export & Import JSON Database
   const exportJson = () => {
     const payload = {
-      version: '1.0',
+      version: '1.1',
       game: 'Gate of Kronos',
       exportedAt: new Date().toISOString(),
       cards,
@@ -2323,7 +1866,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
         const parsed = JSON.parse(reader.result);
         if (Array.isArray(parsed.cards)) saveCardDatabase(parsed.cards);
         if (Array.isArray(parsed.starterDecks)) saveStarterDecks(parsed.starterDecks);
-        alert(`นำเข้าฐานข้อมูลสำเร็จ! (${parsed.cards?.length || 0} การ์ด, ${parsed.starterDecks?.length || 0} Starter Decks)`);
+        alert('นำเข้าฐานข้อมูลสำเร็จ!');
       } catch (err) {
         alert('ไฟล์ JSON ไม่ถูกต้อง');
       }
@@ -2331,7 +1874,6 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
     reader.readAsText(file);
   };
 
-  // Build Starter Deck 40 cards in Admin
   const handleCreateStarterDeck = () => {
     const hero = cards.find((c) => c.id === starterHeroId);
     if (!hero) {
@@ -2381,14 +1923,13 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
 
   return (
     <div className="space-y-6">
-      {/* Admin Top Bar: Export / Import / Batch Upload */}
       <div className="bg-slate-900 border border-emerald-500/30 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-extrabold text-emerald-300 flex items-center gap-2">
-            <Settings className="w-5 h-5" /> Admin Card Studio — จัดการฐานข้อมูลการ์ด Gate of Kronos
+            <Settings className="w-5 h-5" /> Admin Card Studio — กรอกข้อมูลการ์ดตามประเภท
           </h2>
           <p className="text-xs text-slate-400">
-            นำเข้ารูปการ์ดจากโฟลเดอร์ Hero / Aspect / Scenario / Side ของคุณ กรอกค่าพลัง และตั้งค่า Trigger อัตโนมัติ
+            เลือกประเภทการ์ดก่อน ระบบจะแสดงเฉพาะช่องที่จำเป็นสำหรับประเภทนั้นๆ (เช่น พันธมิตรจะมี Consequential Damage ให้กรอก)
           </p>
         </div>
 
@@ -2397,14 +1938,9 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
             <FolderOpen className="w-4 h-4" /> นำเข้ารูปหลายใบ (Batch)
             <input type="file" accept="image/*" multiple onChange={handleBatchImageImport} className="hidden" />
           </label>
-
-          <button
-            onClick={exportJson}
-            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5"
-          >
+          <button onClick={exportJson} className="px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5">
             <Download className="w-4 h-4" /> Export JSON
           </button>
-
           <label className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold rounded-xl text-xs cursor-pointer flex items-center gap-1.5">
             <Upload className="w-4 h-4" /> Import JSON
             <input type="file" accept=".json" onChange={importJson} className="hidden" />
@@ -2412,11 +1948,10 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
         </div>
       </div>
 
-      {/* Main Card Editor Form */}
       <form onSubmit={handleSaveCard} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <h3 className="font-bold text-base text-white">
-            {editingId ? `✏️ แก้ไขการ์ด: ${form.name}` : '➕ เพิ่มการ์ดใหม่เข้าสู่ระบบ'}
+            {editingId ? `✏️ แก้ไขการ์ด: ${form.name}` : '➕ เพิ่มการ์ดใหม่'}
           </h3>
           {editingId && (
             <button
@@ -2433,7 +1968,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
         </div>
 
         <div className="grid lg:grid-cols-12 gap-5">
-          {/* Image Preview & Upload */}
+          {/* Image Column */}
           <div className="lg:col-span-3 flex flex-col items-center space-y-2">
             <div className="w-48 aspect-[63/88] bg-slate-950 border-2 border-dashed border-slate-700 rounded-xl overflow-hidden flex items-center justify-center">
               {form.imageUrl ? (
@@ -2448,23 +1983,25 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
             </label>
           </div>
 
-          {/* Card Attributes */}
+          {/* Dynamic Form Column */}
           <div className="lg:col-span-9 space-y-4">
-            <div className="grid sm:grid-cols-4 gap-3">
-              <div className="sm:col-span-2">
-                <label className="text-xs text-slate-400 block mb-1">ชื่อการ์ด *</label>
-                <input
-                  type="text"
-                  required
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="เช่น มังกี้ ดี. ลูฟี่ / หมัดช้างสาร / เพน"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
-                />
+            {/* Step 1: Select Card Type First */}
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 grid sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-bold text-amber-300 block mb-1">1. เลือกประเภทการ์ดก่อน *</label>
+                <select
+                  value={form.type}
+                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                  className="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-2 text-sm font-bold text-white"
+                >
+                  {CARD_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">หมวดโฟลเดอร์หลัก</label>
+                <label className="text-xs text-slate-300 block mb-1">หมวดโฟลเดอร์หลัก</label>
                 <select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
@@ -2477,7 +2014,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">เรื่องอนิเมะ</label>
+                <label className="text-xs text-slate-300 block mb-1">เรื่องอนิเมะ</label>
                 <select
                   value={form.series}
                   onChange={(e) => setForm({ ...form, series: e.target.value })}
@@ -2490,18 +2027,18 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-4 gap-3">
+            {/* Name & Group Fields */}
+            <div className="grid sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-xs text-slate-400 block mb-1">ประเภทการ์ด</label>
-                <select
-                  value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value })}
+                <label className="text-xs text-slate-400 block mb-1">ชื่อการ์ด *</label>
+                <input
+                  type="text"
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  placeholder="ชื่อการ์ด..."
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
-                >
-                  {CARD_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
@@ -2518,55 +2055,163 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
               </div>
 
               <div>
-                <label className="text-xs text-slate-400 block mb-1">เจ้าของชุดฮีโร่ (Hero Set)</label>
+                <label className="text-xs text-slate-400 block mb-1">
+                  {form.category === 'Hero' ? 'เจ้าของชุดฮีโร่ (Hero Set)' : 'ชื่อชุด Scenario / Side'}
+                </label>
                 <input
                   type="text"
-                  value={form.heroOwner}
-                  onChange={(e) => setForm({ ...form, heroOwner: e.target.value })}
-                  placeholder="เช่น มังกี้ ดี. ลูฟี่"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">ชื่อชุด Scenario / Side</label>
-                <input
-                  type="text"
-                  value={form.setGroup}
-                  onChange={(e) => setForm({ ...form, setGroup: e.target.value })}
-                  placeholder="เช่น เพน / องค์กรแสงอุษา"
+                  value={form.category === 'Hero' ? form.heroOwner : form.setGroup}
+                  onChange={(e) =>
+                    form.category === 'Hero'
+                      ? setForm({ ...form, heroOwner: e.target.value })
+                      : setForm({ ...form, setGroup: e.target.value })
+                  }
+                  placeholder={form.category === 'Hero' ? 'เช่น มังกี้ ดี. ลูฟี่' : 'เช่น เพน / องค์กรแสงอุษา'}
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
                 />
               </div>
             </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-3 sm:grid-cols-9 gap-2">
-              {[
-                { key: 'cost', label: 'Cost' },
-                { key: 'thw', label: 'THW' },
-                { key: 'atk', label: 'ATK' },
-                { key: 'def', label: 'DEF' },
-                { key: 'rec', label: 'REC' },
-                { key: 'sch', label: 'SCH' },
-                { key: 'hp', label: 'HP' },
-                { key: 'handSize', label: 'Hand' },
-                { key: 'maxCopies', label: 'จำนวนใบ' }
-              ].map((stat) => (
-                <div key={stat.key}>
-                  <label className="text-[11px] text-slate-400 block mb-0.5">{stat.label}</label>
+            {/* Dynamic Stats Row (Only renders fields relevant to form.type) */}
+            <div className="flex flex-wrap gap-3 bg-slate-950/70 border border-slate-800 rounded-xl p-3">
+              {fields.showCost && (
+                <div className="w-24">
+                  <label className="text-[11px] text-amber-300 font-bold block mb-1">Cost</label>
                   <input
                     type="number"
-                    value={form[stat.key]}
-                    onChange={(e) => setForm({ ...form, [stat.key]: Number(e.target.value) })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                    value={form.cost}
+                    onChange={(e) => setForm({ ...form, cost: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
                   />
                 </div>
-              ))}
+              )}
+
+              {fields.showThw && (
+                <div className="w-24">
+                  <label className="text-[11px] text-sky-300 font-bold block mb-1">THW</label>
+                  <input
+                    type="number"
+                    value={form.thw}
+                    onChange={(e) => setForm({ ...form, thw: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                  />
+                </div>
+              )}
+
+              {fields.showAtk && (
+                <div className="w-24">
+                  <label className="text-[11px] text-rose-300 font-bold block mb-1">ATK</label>
+                  <input
+                    type="number"
+                    value={form.atk}
+                    onChange={(e) => setForm({ ...form, atk: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                  />
+                </div>
+              )}
+
+              {fields.showDef && (
+                <div className="w-24">
+                  <label className="text-[11px] text-emerald-300 font-bold block mb-1">DEF</label>
+                  <input
+                    type="number"
+                    value={form.def}
+                    onChange={(e) => setForm({ ...form, def: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                  />
+                </div>
+              )}
+
+              {fields.showRec && (
+                <div className="w-24">
+                  <label className="text-[11px] text-emerald-300 font-bold block mb-1">REC</label>
+                  <input
+                    type="number"
+                    value={form.rec}
+                    onChange={(e) => setForm({ ...form, rec: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                  />
+                </div>
+              )}
+
+              {fields.showSch && (
+                <div className="w-24">
+                  <label className="text-[11px] text-amber-300 font-bold block mb-1">SCH</label>
+                  <input
+                    type="number"
+                    value={form.sch}
+                    onChange={(e) => setForm({ ...form, sch: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                  />
+                </div>
+              )}
+
+              {fields.showHp && (
+                <div className="w-24">
+                  <label className="text-[11px] text-emerald-300 font-bold block mb-1">HP</label>
+                  <input
+                    type="number"
+                    value={form.hp}
+                    onChange={(e) => setForm({ ...form, hp: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                  />
+                </div>
+              )}
+
+              {fields.showConsequentialDamage && (
+                <div className="w-36">
+                  <label className="text-[11px] text-rose-400 font-bold block mb-1">Consequential Damage</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.consequentialDamage}
+                    onChange={(e) => setForm({ ...form, consequentialDamage: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-rose-500/50 rounded-lg px-2 py-1.5 text-xs text-center font-bold text-rose-200"
+                  />
+                </div>
+              )}
+
+              {fields.showHandSize && (
+                <div className="w-24">
+                  <label className="text-[11px] text-sky-300 font-bold block mb-1">ขนาดมือ</label>
+                  <input
+                    type="number"
+                    value={form.handSize}
+                    onChange={(e) => setForm({ ...form, handSize: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                  />
+                </div>
+              )}
+
+              {fields.showMaxCopies && (
+                <div className="w-24">
+                  <label className="text-[11px] text-slate-300 font-bold block mb-1">จำนวนใบ</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.maxCopies}
+                    onChange={(e) => setForm({ ...form, maxCopies: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                  />
+                </div>
+              )}
+
+              {fields.showBoost && (
+                <div className="w-24">
+                  <label className="text-[11px] text-purple-300 font-bold block mb-1">ไอคอนบูสต์</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={form.boostIcons}
+                    onChange={(e) => setForm({ ...form, boostIcons: Number(e.target.value) })}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Resources & Traits */}
-            <div className="grid sm:grid-cols-2 gap-3">
+            {/* Dynamic Resources for Player Cards */}
+            {fields.showResources && (
               <div>
                 <label className="text-xs text-slate-400 block mb-1">ทรัพยากรที่ให้ (เมื่อทิ้งจากมือจ่าย)</label>
                 <div className="grid grid-cols-4 gap-2">
@@ -2584,10 +2229,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                         max={3}
                         value={form.resources[res.key]}
                         onChange={(e) =>
-                          setForm({
-                            ...form,
-                            resources: { ...form.resources, [res.key]: Number(e.target.value) }
-                          })
+                          setForm({ ...form, resources: { ...form.resources, [res.key]: Number(e.target.value) } })
                         }
                         className="w-9 bg-slate-900 border border-slate-700 rounded text-center"
                       />
@@ -2595,41 +2237,17 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                   ))}
                 </div>
               </div>
+            )}
 
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">แท็ก (Traits) & ไอคอนบูสต์</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={form.traits}
-                    onChange={(e) => setForm({ ...form, traits: e.target.value })}
-                    placeholder="เช่น พลังพิเศษ, การโจมตี, นักผจญภัย"
-                    className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-sm"
-                  />
-                  <input
-                    type="number"
-                    min={0}
-                    max={4}
-                    value={form.boostIcons}
-                    onChange={(e) => setForm({ ...form, boostIcons: Number(e.target.value) })}
-                    title="จำนวนไอคอนบูสต์"
-                    placeholder="Boost"
-                    className="w-16 bg-slate-950 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-center"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Villain / Scheme Extra Settings */}
-            {(form.category === 'Scenario' || form.category === 'Side') && (
+            {/* Dynamic Scheme / Villain Fields */}
+            {fields.showSchemeFields && (
               <div className="grid sm:grid-cols-4 gap-3 bg-rose-950/20 border border-rose-500/30 p-3 rounded-xl">
                 <div>
-                  <label className="text-xs text-rose-200 block mb-1">สเตจวายร้าย/แผนการ</label>
+                  <label className="text-xs text-rose-200 block mb-1">สเตจ</label>
                   <input
                     type="text"
                     value={form.stage}
                     onChange={(e) => setForm({ ...form, stage: e.target.value })}
-                    placeholder="1, 2, 3 หรือ 1B"
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs"
                   />
                 </div>
@@ -2643,7 +2261,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-rose-200 block mb-1">เพดานภัยคุกคาม (ต่อผู้เล่น)</label>
+                  <label className="text-xs text-rose-200 block mb-1">เพดานภัยคุกคาม (ต่อคน)</label>
                   <input
                     type="number"
                     value={form.threatThreshold}
@@ -2652,40 +2270,44 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                   />
                 </div>
                 <div className="flex flex-col justify-center gap-1 text-xs">
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.hpPerPlayer}
-                      onChange={(e) => setForm({ ...form, hpPerPlayer: e.target.checked })}
-                    />
+                  <label className="flex items-center gap-1.5">
+                    <input type="checkbox" checked={form.hpPerPlayer} onChange={(e) => setForm({ ...form, hpPerPlayer: e.target.checked })} />
                     <span>HP คูณจำนวนผู้เล่น</span>
                   </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.threatPerPlayer}
-                      onChange={(e) => setForm({ ...form, threatPerPlayer: e.target.checked })}
-                    />
+                  <label className="flex items-center gap-1.5">
+                    <input type="checkbox" checked={form.threatPerPlayer} onChange={(e) => setForm({ ...form, threatPerPlayer: e.target.checked })} />
                     <span>ภัยคุกคามคูณจำนวนผู้เล่น</span>
                   </label>
                 </div>
               </div>
             )}
 
-            {/* Ability Text */}
-            <div>
-              <label className="text-xs text-slate-400 block mb-1">ข้อความความสามารถบนการ์ด</label>
-              <textarea
-                rows={3}
-                value={form.text}
-                onChange={(e) => setForm({ ...form, text: e.target.value })}
-                placeholder="เช่น ตอบสนอง: หลังจากที่เปลี่ยนมาเป็นร่างนี้ ทำความเสียหาย 2 หน่วยให้กับศัตรู 1 ตัว"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
-              />
+            {/* Traits & Ability Text */}
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">แท็ก (Traits)</label>
+                <input
+                  type="text"
+                  value={form.traits}
+                  onChange={(e) => setForm({ ...form, traits: e.target.value })}
+                  placeholder="เช่น พันธมิตร, นักดาบ, การโจมตี"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs text-slate-400 block mb-1">ข้อความความสามารถ</label>
+                <textarea
+                  rows={2}
+                  value={form.text}
+                  onChange={(e) => setForm({ ...form, text: e.target.value })}
+                  placeholder="กรอกข้อความความสามารถของการ์ด..."
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
+                />
+              </div>
             </div>
 
-            {/* 4-STEP RULE BUILDER FOR SEMI-AUTOMATED TRIGGERS */}
-            <div className="bg-indigo-950/30 border border-indigo-500/30 rounded-xl p-3.5 space-y-3">
+            {/* 4-Step Rule Builder */}
+            <div className="bg-indigo-950/30 border border-indigo-500/30 rounded-xl p-3.5 space-y-2.5">
               <div className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
                 <Zap className="w-4 h-4 text-amber-400" /> ตั้งค่า Trigger อัตโนมัติ (4-Step Rule Builder)
               </div>
@@ -2702,7 +2324,6 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                     ))}
                   </select>
                 </div>
-
                 <div>
                   <label className="text-[11px] text-slate-400 block mb-1">2. เหตุการณ์ที่กระตุ้น</label>
                   <select
@@ -2715,9 +2336,8 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                     ))}
                   </select>
                 </div>
-
                 <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">3. ผลลัพธ์อัตโนมัติ</label>
+                  <label className="text-[11px] text-slate-400 block mb-1">3. ผลลัพธ์</label>
                   <select
                     value={form.effectAction}
                     onChange={(e) => setForm({ ...form, effectAction: e.target.value })}
@@ -2728,9 +2348,8 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                     ))}
                   </select>
                 </div>
-
                 <div>
-                  <label className="text-[11px] text-slate-400 block mb-1">4. ค่าตัวเลข (หน่วย/แต้ม)</label>
+                  <label className="text-[11px] text-slate-400 block mb-1">4. ค่าตัวเลข</label>
                   <input
                     type="number"
                     value={form.effectValue}
@@ -2742,10 +2361,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
             </div>
 
             <div className="flex justify-end">
-              <button
-                type="submit"
-                className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-sm transition"
-              >
+              <button type="submit" className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-sm">
                 {editingId ? 'บันทึกการแก้ไขการ์ด' : '+ บันทึกการ์ดเข้าฐานข้อมูล'}
               </button>
             </div>
@@ -2753,7 +2369,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
         </div>
       </form>
 
-      {/* STARTER DECK BUILDER FOR ADMIN */}
+      {/* Starter Deck Creator */}
       <div className="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 space-y-4">
         <h3 className="font-bold text-base text-amber-300 flex items-center gap-2">
           <Award className="w-5 h-5" /> สร้าง Starter Deck (40 ใบ) ให้ผู้เล่นเลือกใช้งานทันที
@@ -2763,7 +2379,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
             type="text"
             value={starterName}
             onChange={(e) => setStarterName(e.target.value)}
-            placeholder="ชื่อ Starter Deck (เช่น ลูฟี่ Aggression)"
+            placeholder="ชื่อ Starter Deck..."
             className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
           />
           <select
@@ -2785,16 +2401,11 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
               <option key={a.id} value={a.id}>{a.label}</option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={handleCreateStarterDeck}
-            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm py-2"
-          >
+          <button type="button" onClick={handleCreateStarterDeck} className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-sm py-2">
             + บันทึก Starter Deck ({starterCardIds.length} ใบเสริม)
           </button>
         </div>
 
-        {/* Select Aspect/Basic cards to include in Starter Deck */}
         <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
           {cards
             .filter((c) => c.category === 'Aspect')
@@ -2820,10 +2431,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
               <div key={sd.id} className="px-3 py-1.5 bg-slate-950 border border-amber-500/30 rounded-xl text-xs flex items-center gap-2">
                 <span className="font-bold text-amber-200">{sd.name}</span>
                 <span className="text-slate-400">({sd.cardIds.length} ใบ)</span>
-                <button
-                  onClick={() => saveStarterDecks(starterDecks.filter((x) => x.id !== sd.id))}
-                  className="text-rose-400 hover:text-rose-300"
-                >
+                <button onClick={() => saveStarterDecks(starterDecks.filter((x) => x.id !== sd.id))} className="text-rose-400">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -2832,7 +2440,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
         )}
       </div>
 
-      {/* CARD DATABASE LIST */}
+      {/* Card List */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-bold text-base">การ์ดทั้งหมดในฐานข้อมูล ({filteredCards.length} ใบ)</h3>
@@ -2841,7 +2449,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="ค้นหาชื่อการ์ด / ฮีโร่ / ชุด..."
+              placeholder="ค้นหาชื่อการ์ด..."
               className="bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs"
             />
             <select
@@ -2870,20 +2478,14 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                 </div>
                 <div className="font-bold text-xs truncate">{card.name}</div>
                 <div className="text-[10px] text-slate-400 truncate">
-                  {card.category} • {card.heroOwner || card.setGroup || card.aspect}
+                  {card.type.split(' ')[0]} {card.type === 'พันธมิตร (Ally)' ? `• CD ${card.consequentialDamage ?? 1}` : ''}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-1">
-                <button
-                  onClick={() => startEditCard(card)}
-                  className="py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded text-[11px] font-bold"
-                >
+                <button onClick={() => startEditCard(card)} className="py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 rounded text-[11px] font-bold">
                   แก้ไข
                 </button>
-                <button
-                  onClick={() => deleteCard(card.id)}
-                  className="py-1 bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 rounded text-[11px]"
-                >
+                <button onClick={() => deleteCard(card.id)} className="py-1 bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 rounded text-[11px]">
                   ลบ
                 </button>
               </div>
