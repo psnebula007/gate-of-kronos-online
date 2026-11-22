@@ -69,7 +69,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: false,
     showBoostIcons: false,
-    showMaxCopies: false,
     defaultMaxCopies: 1,
     hint: 'การ์ดร่างฮีโร่: กรอก THW, ATK, DEF, HP และขนาดมือ (Hand Size)'
   },
@@ -87,7 +86,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: false,
     showBoostIcons: false,
-    showMaxCopies: false,
     defaultMaxCopies: 1,
     hint: 'การ์ดร่างพลเรือน: กรอก REC (ฟื้นฟู), HP และขนาดมือ (Hand Size)'
   },
@@ -105,7 +103,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: true,
     showBoostIcons: false,
-    showMaxCopies: true,
     defaultMaxCopies: 1,
     hint: 'การ์ดพันธมิตร: กรอก Cost, THW, ATK, HP และ Consequential Damage (ความเสียหายต่อเนื่องเมื่อใช้ THW/ATK)'
   },
@@ -123,7 +120,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: true,
     showBoostIcons: false,
-    showMaxCopies: true,
     defaultMaxCopies: 3,
     hint: 'การ์ดเหตุการณ์: กรอก Cost, ทรัพยากรที่ให้ และจำนวนใบในเด็ค'
   },
@@ -141,7 +137,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: true,
     showBoostIcons: false,
-    showMaxCopies: true,
     defaultMaxCopies: 2,
     hint: 'การ์ดอัปเกรด: กรอก Cost, ทรัพยากร และจำนวนใบ'
   },
@@ -159,7 +154,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: true,
     showBoostIcons: false,
-    showMaxCopies: true,
     defaultMaxCopies: 1,
     hint: 'การ์ดสนับสนุน: กรอก Cost, ทรัพยากร และจำนวนใบ'
   },
@@ -177,7 +171,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: true,
     showBoostIcons: false,
-    showMaxCopies: true,
     defaultMaxCopies: 3,
     hint: 'การ์ดทรัพยากร: ระบุจำนวนทรัพยากรสีต่างๆ ที่ให้เมื่อทิ้งจากมือ'
   },
@@ -195,7 +188,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: false,
     showBoostIcons: false,
-    showMaxCopies: true,
     defaultMaxCopies: 1,
     hint: 'การ์ดภาระผูกพัน: กรอกข้อความเงื่อนไขและผลกระทบ'
   },
@@ -213,7 +205,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: false,
     showBoostIcons: false,
-    showMaxCopies: false,
     defaultMaxCopies: 1,
     hint: 'การ์ดวายร้าย: กรอก SCH (วางแผน), ATK, HP ต่อผู้เล่น และระบุสเตจ'
   },
@@ -231,7 +222,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: true,
     showResources: false,
     showBoostIcons: false,
-    showMaxCopies: false,
     defaultMaxCopies: 1,
     hint: 'แผนการหลัก: กรอกแต้มภัยคุกคามเริ่มต้น และเพดานภัยคุกคามต่อผู้เล่น'
   },
@@ -249,7 +239,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: false,
     showBoostIcons: true,
-    showMaxCopies: true,
     defaultMaxCopies: 1,
     hint: 'แผนการรอง: กรอกภัยคุกคามเริ่มต้น และไอคอนบูสต์'
   },
@@ -267,7 +256,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: false,
     showBoostIcons: true,
-    showMaxCopies: true,
     defaultMaxCopies: 1,
     hint: 'การ์ดลูกสมุน: กรอก SCH, ATK, HP และไอคอนบูสต์'
   },
@@ -285,7 +273,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: false,
     showBoostIcons: true,
-    showMaxCopies: true,
     defaultMaxCopies: 1,
     hint: 'การ์ดการทรยศ: กรอกผลเมื่อเปิดเผย (When Revealed) และไอคอนบูสต์'
   },
@@ -303,7 +290,6 @@ const TYPE_FIELD_CONFIG = {
     showThreatThreshold: false,
     showResources: false,
     showBoostIcons: true,
-    showMaxCopies: true,
     defaultMaxCopies: 1,
     hint: 'การ์ดอุปกรณ์เสริม: กรอกเงื่อนไขการสวมใส่ ผลกระทบ และไอคอนบูสต์'
   }
@@ -385,7 +371,7 @@ const emptyCardForm = {
   boostIcons: 0,
   traits: '',
   text: '',
-  maxCopies: 1,
+  isUnique: false,
   imageUrl: '',
   triggerTiming: 'None',
   triggerEvent: 'manual',
@@ -695,10 +681,7 @@ export default function GateOfKronos() {
 
     let encounterDeck = [];
     [...villainEncounter, ...sideEncounter].forEach((c) => {
-      const copies = Number(c.maxCopies || 1);
-      for (let i = 0; i < copies; i++) {
-        encounterDeck.push({ ...c, instanceId: uid() });
-      }
+      encounterDeck.push({ ...c, instanceId: uid() });
     });
     encounterDeck = shuffleArray(encounterDeck);
 
@@ -969,7 +952,10 @@ export default function GateOfKronos() {
                     <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       {inspectedCard.series} • {inspectedCard.type}
                     </span>
-                    <h3 className="text-xl font-bold mt-1 text-white">{inspectedCard.name}</h3>
+                    <h3 className="text-xl font-bold mt-1 text-white flex items-center gap-1.5">
+                      {inspectedCard.isUnique && <span className="text-amber-400" title="การ์ดยูนีก (อยู่ในสนามได้เพียง 1 ใบ)">❂</span>}
+                      <span>{inspectedCard.name}</span>
+                    </h3>
                     {inspectedCard.subTitle && <p className="text-xs text-slate-400">{inspectedCard.subTitle}</p>}
                   </div>
                   <button onClick={() => setInspectedCard(null)} className="p-1 text-slate-400 hover:text-white">
@@ -1471,6 +1457,18 @@ function TabletopView({
     if (!isMe) return;
     const card = activePlayer.hand.find((c) => c.instanceId === instanceId);
     if (!card) return;
+
+    if (card.isUnique) {
+      const existingOwner = Object.values(players || {}).find((p) =>
+        (p.playArea || []).some((pc) => pc.name === card.name)
+      );
+      if (existingOwner) {
+        alert(
+          `⚠️ การ์ดยูนีก (❂) "${card.name}" มีอยู่ในสนามแล้ว (ของ ${existingOwner.name}) ไม่สามารถลงซ้ำได้จนกว่าใบที่อยู่ในสนามจะหายไปครับ`
+        );
+        return;
+      }
+    }
 
     const remainingHand = activePlayer.hand.filter((c) => c.instanceId !== instanceId);
     const isPermanent = ['อัปเกรด (Upgrade)', 'สนับสนุน (Support)', 'พันธมิตร (Ally)'].includes(card.type);
@@ -2117,7 +2115,7 @@ function TabletopView({
                         }`}
                       >
                         <div onClick={() => setInspectedCard(card)} className="cursor-pointer">
-                          <div className="text-[11px] font-bold truncate text-white">{card.name}</div>
+                          <div className="text-[11px] font-bold truncate text-white">{card.isUnique ? `❂ ${card.name}` : card.name}</div>
                           <div className="text-[10px] text-slate-400">{card.type.split(' ')[0]}</div>
                           {isAlly && (
                             <div className="text-[10px] text-rose-300 mt-0.5">
@@ -2229,7 +2227,7 @@ function TabletopView({
                           <span className="text-[11px] text-center p-2 text-slate-400">{card.name}</span>
                         )}
                       </div>
-                      <div className="font-bold text-xs truncate text-white">{card.name}</div>
+                      <div className="font-bold text-xs truncate text-white">{card.isUnique ? `❂ ${card.name}` : card.name}</div>
                       <div className="flex items-center justify-between text-[10px] text-slate-400">
                         <span>Cost: {card.cost}</span>
                         <span>
@@ -2306,11 +2304,14 @@ function DeckBuilderView({ cards, customDecks, saveCustomDecks, setInspectedCard
       !c.type.includes('ร่างพลเรือน')
   );
 
-  const heroKitExpanded = [];
-  heroKitCards.forEach((c) => {
-    const qty = Number(c.maxCopies || 1);
-    for (let i = 0; i < qty; i++) heroKitExpanded.push(c.id);
-  });
+  const heroKitExpanded = heroKitCards.map((c) => c.id);
+  const heroKitNameCounts = heroKitCards.reduce((acc, c) => {
+    acc[c.name] = (acc[c.name] || 0) + 1;
+    return acc;
+  }, {});
+  const overThreeHeroKitNames = Object.entries(heroKitNameCounts)
+    .filter(([, cnt]) => cnt > 3)
+    .map(([name]) => name);
 
   const poolCards = cards.filter(
     (c) => c.category === 'Aspect' && (c.aspect === chosenAspect || c.aspect === 'Basics')
@@ -2318,10 +2319,22 @@ function DeckBuilderView({ cards, customDecks, saveCustomDecks, setInspectedCard
 
   const totalCards = heroKitExpanded.length + addedAspectCardIds.length;
 
+  const getNonKitCountByName = (cardName) =>
+    addedAspectCardIds.filter((id) => {
+      const found = cards.find((c) => c.id === id);
+      return found?.name === cardName;
+    }).length;
+
   const addCardToDeck = (card) => {
-    const currentCount = addedAspectCardIds.filter((id) => id === card.id).length;
-    if (currentCount >= Number(card.maxCopies || 3)) return;
-    if (totalCards >= 50) return;
+    if (totalCards >= 50) {
+      alert('เด็คมีจำนวนสูงสุดได้ไม่เกิน 50 ใบครับ');
+      return;
+    }
+    const sameNameCount = getNonKitCountByName(card.name);
+    if (sameNameCount >= 3) {
+      alert(`⚠️ ใส่การ์ดชื่อ "${card.name}" ได้ไม่เกิน 3 ใบต่อเด็คครับ (ยกเว้นชุดประจำตัวฮีโร่)`);
+      return;
+    }
     setAddedAspectCardIds((prev) => [...prev, card.id]);
   };
 
@@ -2397,14 +2410,14 @@ function DeckBuilderView({ cards, customDecks, saveCustomDecks, setInspectedCard
             return (
               <div key={card.id} className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-2">
                 <div onClick={() => setInspectedCard(card)} className="cursor-pointer min-w-0">
-                  <div className="font-bold text-sm truncate">{card.name}</div>
+                  <div className="font-bold text-sm truncate">{card.isUnique ? `❂ ${card.name}` : card.name}</div>
                   <div className="text-xs text-slate-400">
                     Cost {card.cost} • {card.aspect} • {card.type.split(' ')[0]}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button onClick={() => removeCardFromDeck(card.id)} className="w-7 h-7 bg-slate-800 rounded-lg font-bold">-</button>
-                  <span className="text-xs font-bold w-8 text-center">{count}/{card.maxCopies || 3}</span>
+                  <span className="text-xs font-bold w-8 text-center">{getNonKitCountByName(card.name)}/3</span>
                   <button onClick={() => addCardToDeck(card)} className="w-7 h-7 bg-sky-500 text-slate-950 rounded-lg font-bold">+</button>
                 </div>
               </div>
@@ -2435,8 +2448,16 @@ function DeckBuilderView({ cards, customDecks, saveCustomDecks, setInspectedCard
             className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm"
           />
 
-          <div className="text-xs text-amber-300 bg-amber-500/10 px-3 py-2 rounded-xl border border-amber-500/30">
-            ชุดการ์ดประจำตัวฮีโร่: {heroKitExpanded.length} ใบ (ดึงให้อัตโนมัติ)
+          <div className="text-xs text-amber-300 bg-amber-500/10 px-3 py-2 rounded-xl border border-amber-500/30 space-y-1">
+            <div>ชุดการ์ดประจำตัวฮีโร่: {heroKitExpanded.length} ใบ (ดึงให้อัตโนมัติ • ยกเว้นกฎใส่ซ้ำเกิน 3 ใบ)</div>
+            {overThreeHeroKitNames.length > 0 && (
+              <div className="text-emerald-300">
+                ✓ ชุดฮีโร่มีการ์ดซ้ำเกิน 3 ใบ: {overThreeHeroKitNames.join(', ')} (ได้รับอนุญาตตามกติกา)
+              </div>
+            )}
+          </div>
+          <div className="text-[11px] text-slate-400">
+            * กติกาการจัดเด็ค: ใส่การ์ดชื่อเดียวกันได้ไม่เกิน 3 ใบ (ยกเว้นการ์ดในชุดประจำตัวฮีโร่)
           </div>
 
           <button
@@ -2624,10 +2645,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
         !c.type.includes('ร่างฮีโร่') &&
         !c.type.includes('ร่างพลเรือน')
     );
-    const kitIds = [];
-    heroKit.forEach((c) => {
-      for (let i = 0; i < Number(c.maxCopies || 1); i++) kitIds.push(c.id);
-    });
+    const kitIds = heroKit.map((c) => c.id);
 
     const fullIds = [...kitIds, ...starterCardIds];
     const newStarter = {
@@ -2738,13 +2756,24 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
               </div>
 
               <div className="sm:col-span-2">
-                <label className="text-xs text-slate-300 block mb-1">2. ชื่อการ์ด *</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs text-slate-300">2. ชื่อการ์ด *</label>
+                  <label className="flex items-center gap-1.5 text-xs text-amber-300 font-bold cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(form.isUnique)}
+                      onChange={(e) => setForm({ ...form, isUnique: e.target.checked })}
+                      className="rounded text-amber-500"
+                    />
+                    <span>❂ การ์ดยูนีก (มีในสนามได้ใบเดียว)</span>
+                  </label>
+                </div>
                 <input
                   type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="เช่น โซโล / บากี้ / สลับเกียร์"
+                  placeholder="เช่น นิค ฟิวรี / โซโล / บากี้"
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm"
                 />
               </div>
@@ -2979,19 +3008,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                 </div>
               )}
 
-              {fieldCfg.showMaxCopies && (
-                <div className="w-24">
-                  <label className="text-[11px] text-slate-300 font-bold block mb-0.5">จำนวนใบ</label>
-                  <input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={form.maxCopies}
-                    onChange={(e) => setForm({ ...form, maxCopies: Number(e.target.value) })}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-center"
-                  />
-                </div>
-              )}
+
             </div>
 
             {/* Resources & Traits */}
@@ -3267,7 +3284,7 @@ function AdminStudioView({ cards, saveCardDatabase, starterDecks, saveStarterDec
                     <span className="text-[10px] text-slate-500 text-center p-2">{card.name}</span>
                   )}
                 </div>
-                <div className="font-bold text-xs truncate">{card.name}</div>
+                <div className="font-bold text-xs truncate">{card.isUnique ? `❂ ${card.name}` : card.name}</div>
                 <div className="text-[10px] text-slate-400 truncate">
                   {card.type.split(' ')[0]} • {card.heroOwner || card.setGroup || card.aspect}
                 </div>
